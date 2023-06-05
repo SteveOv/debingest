@@ -1,0 +1,22 @@
+name: debingest
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - numpy=1.19
+  - pathlib
+  - scipy=1.7
+  - matplotlib=3.4
+  - astropy=5.1
+  - lightkurve=2.4
+  - scikit-learn=1.0
+
+  # TensorFlow requirements
+  - pip
+  - pip:
+    - tensorflow~=2.6.0
+    - keras~=2.6.0
+
+variables:
+  JKTEBOP_DIR: ~/jktebop43
