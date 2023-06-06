@@ -161,4 +161,4 @@ cython_debug/
 
 
 # Specific to this project
-__mast_cache
+staging/
