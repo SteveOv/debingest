@@ -18,5 +18,8 @@ dependencies:
     - tensorflow~=2.6.0
     - keras~=2.6.0
 
+  # For TensorFlow/Keras 2.6 to see & use Nvidia GPUs - sensitive to minimum version. 
+  - cudnn=8.1
+  
 variables:
   JKTEBOP_DIR: ~/jktebop43

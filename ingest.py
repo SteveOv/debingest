@@ -1,13 +1,15 @@
 from pathlib import Path
 import argparse
 import textwrap
+from string import Template
 import numpy as np
+from scipy.interpolate.interpolate import interp1d
 import astropy.units as u
 from astropy.time import Time
 import lightkurve as lk
 from lightkurve import LightCurveCollection
 import matplotlib.pyplot as plt
-
+from tensorflow.keras.models import load_model
 import utils
 
 # -------------------------------------------------------------------
@@ -22,16 +24,23 @@ ap.add_argument("-f", "--flux", type=str, dest="flux_column",
                 help="The flux column to use sap_flux or pdcsap_flux")
 ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
                 action="store_true", required=False,
-                help="Write a plot of each sector light-curve to a png file")
+                help="Write a plot of each sector's light-curve to a png file")
+ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
+                action="store_true", required=False,
+                help="Write a plot of each sector folded data to a png file")
 ap.add_argument("-s", "--systems", type=str, dest="systems", 
                 nargs="+", required=True,
                 help="Search identifier for each system to ingest.")
-ap.set_defaults(systems=[], flux_column="sap_flux", plot_lc=False)
+ap.set_defaults(systems=[], flux_column="sap_flux", 
+                plot_lc=False, plot_fold=False)
 args = ap.parse_args()
 
 quality_threshold = 0
 detrend_sigma_clip = 0.5
+model_phase_bins = 1024
 
+# TODO: Arrange a proper location from which to pick up the model.
+model = load_model("./cnn_model.h5")
 
 for system in args.systems:
     sys_label = system.replace(" ", "_").lower()
@@ -63,6 +72,7 @@ for system in args.systems:
         sector = f"{lc.meta['SECTOR']:0>4}"
         tic = f"{lc.meta['OBJECT']}"
         int_time = lc.meta["INT_TIME"] * u.min
+        file_stem = f"{sys_label}_s{sector}"
 
         narrative = f"Processing sector {sector} covering the period of "\
             f"{lc.meta['DATE-OBS']} to {lc.meta['DATE-END']} with an "\
@@ -119,38 +129,109 @@ for system in args.systems:
         # Optionally plot the light-curve for diagnostics
         # ---------------------------------------------------------------------
         if args.plot_lc:
-            fig = plt.figure(figsize=(6, 4), constrained_layout=True)
+            fig = plt.figure(figsize=(8, 4), constrained_layout=True)
             ax = fig.add_subplot(111)
             lc.scatter(column="delta_mag", ax=ax, 
                        ylabel="Relative Magnitude [mag]")
             ax.invert_yaxis()
             ax.get_legend().remove()
             ax.set(title=f"{system} ({tic}) sector {sector}")
-            plt.savefig(staging_dir / f"{sys_label}_s{sector}.png", dpi=300)
+            plt.savefig(staging_dir / (file_stem + ".png"), dpi=300)
 
 
         # ---------------------------------------------------------------------
-        # Find the orbital period and suitable primary_epoch
+        # Find the orbital period & primary_epoch and phase fold the light-curve
         # ---------------------------------------------------------------------
-        # TODO - maybe find peaks to find the largest (primary) eclipse
-        #        and a periodogram to find the period
-        pg = lc.to_periodogram("bls")
-        print(pg)
+        # TODO - find primary epoch - time of best primary eclipse
+        #        something like lc.time[lc.flux.argmax()]
+        if sector == "0004":
+            primary_epoch = Time(2458415.482922, format="jd", scale="tdb") 
+        else:
+            primary_epoch = Time(2459152.142892, format="jd", scale="tdb")
+
+        # Find the orbital period
+        permax = np.subtract(lc.time.max(), lc.time.min())
+        pg = lc.normalize(unit="ppm").to_periodogram("ls", 
+                                                     maximum_frequency=1,
+                                                     minimum_frequency=1/permax,
+                                                     oversample_factor=100)
+        for period_factor in [2]:
+            # Find the period it should be a harmonic of the max-power peak
+            # TODO: try multiples & count peaks? (I know 2 works for CW Eri)
+            period = np.multiply(pg.period_at_max_power, period_factor)
+
+            # We need a phase folded LC to sample for the estimation model.  
+            # Rotate the phase so that phase 0 is at the 25% position.
+            fold_lc = lc.fold(period, 
+                              epoch_time=primary_epoch,
+                              normalize_phase=True,
+                              wrap_phase=u.Quantity(0.75))
+
 
         # ---------------------------------------------------------------------
-        # Make a phase-fold and binned copy of the lightcurve
+        # Interpolate the folded data to base our estimated params on
         # ---------------------------------------------------------------------
-        # TODO - the ML model is set up for 1024 bins
+        # Now we sample/interpolate the folded LC at 1024 points.
+        # So far, linear interpolation is producing lower variance
+        min_phase = fold_lc.phase.min()
+        interp = interp1d(fold_lc.phase, fold_lc["delta_mag"], kind="linear")
+        phases = np.linspace(min_phase, min_phase+1., model_phase_bins+1)[:-1]
+        mags = interp(phases)
+
+        if args.plot_fold:
+            fig = plt.figure(figsize=(8, 4), constrained_layout=True)
+            ax = fig.add_subplot(111)
+            fold_lc.scatter(column="delta_mag", ax=ax,
+                            ylabel="Relative Magnitude [mag]")
+            ax.errorbar(phases, mags, fmt="k.", markersize=0.75)
+            ax.invert_yaxis()
+            ax.get_legend().remove()
+            ax.set(title=f"Folded light-curve of {system} sector {sector}")
+            plt.savefig(staging_dir / (file_stem + "_folded.png"), dpi=300)
 
 
         # ---------------------------------------------------------------------
         # Use the ML model to estimate system parameters
         # ---------------------------------------------------------------------
-        # TODO 
-        
+        # Now we can invoke the ML model to interpret the folded data & estimate
+        # the parameters for JKTEBOP. Need the mag data in shape[1, 1024, 1]
+        predictions = model.predict(np.array([np.transpose([mags])]), verbose=0)
+
+        # Predictions for a single model will have shape[1, 7]
+        (rA_plus_rB, k, bA, bB, ecosw, esinw, J) = predictions[0, :]
+
+        # Calculate the orbital inclination from the impact parameter.
+        # In training the mae of bA is usually lower, so we'll use that.
+        # TODO: For now assume e == 0 (therefore 1+esinw/1-e^2 ~= 1+esinw)
+        rA = np.divide(rA_plus_rB, np.add(1, k))
+        cosi = np.multiply(np.multiply(rA, bA), np.add(1, esinw))
+        inc = np.rad2deg(np.arccos(cosi))
+
 
         # ---------------------------------------------------------------------
         # Generate JKTEBOP .dat and .in file for task3 and invoke.
         # ---------------------------------------------------------------------
-        # TODO - in file requires token substitution from the ML estimates
-        #        and the period/primary_epoch values from periodogram
+        params = {
+            "rA_plus_rB": rA_plus_rB,
+            "k": k,
+            "inc": inc,
+            "qphot": 0.,
+            "esinw": esinw,
+            "ecosw": ecosw,
+            "J": J,
+            "L3": 0.,
+            # TODO: Do we train LD params?
+            "LD_A": "pow2",
+            "LD_B": "pow2",
+            "LD_A1": 0.65,
+            "LD_B1": 0.65,
+            "LD_A2": 0.47,
+            "LD_B2": 0.47,
+            "reflA": 0.,
+            "reflB": 0.,
+            "period": period.to(u.d).value,
+            "primary_epoch": primary_epoch.jd - 2.4e6,        
+        }
+
+        utils.create_task3_in_file(staging_dir / (file_stem + ".in"), **params)
+        utils.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
