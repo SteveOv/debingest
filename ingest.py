@@ -1,11 +1,10 @@
 from pathlib import Path
 import argparse
 import textwrap
-from string import Template
 import numpy as np
 from scipy.interpolate.interpolate import interp1d
+from scipy.signal import find_peaks, find_peaks_cwt
 import astropy.units as u
-from astropy.time import Time
 import lightkurve as lk
 from lightkurve import LightCurveCollection
 import matplotlib.pyplot as plt
@@ -141,28 +140,15 @@ for system in args.systems:
 
 
         # ---------------------------------------------------------------------
-        # Optionally plot the light-curve for diagnostics
-        # ---------------------------------------------------------------------
-        if args.plot_lc:
-            fig = plt.figure(figsize=(8, 4), constrained_layout=True)
-            ax = fig.add_subplot(111)
-            lc.scatter(column="delta_mag", ax=ax, 
-                       ylabel="Relative Magnitude [mag]")
-            ax.invert_yaxis()
-            ax.get_legend().remove()
-            ax.set(title=f"{system} ({tic}) sector {sector}")
-            plt.savefig(staging_dir / (file_stem + "_lightcurve.png"), dpi=300)
-
-
-        # ---------------------------------------------------------------------
         # Find the orbital period & primary_epoch and phase fold the light-curve
         # ---------------------------------------------------------------------
-        # TODO - find primary epoch - time of best primary eclipse
-        #        something like lc.time[lc.flux.argmax()]
-        if sector == "0004":
-            primary_epoch = Time(1415.482922, format="btjd", scale="tdb") 
-        else:
-            primary_epoch = Time(2152.142892, format="btjd", scale="tdb")
+        # Want peaks of at least 5 samples wide to reject random noise.
+        sigma_mag = np.std(lc["delta_mag"].data)
+        (peak_ixs, peak_props) = find_peaks(lc["delta_mag"], 
+                                            prominence=(sigma_mag, None), 
+                                            width=5)
+        strongest_peak_ix = peak_ixs[peak_props["prominences"].argmax()]
+        primary_epoch = lc.time[strongest_peak_ix]
 
         # Find the orbital period
         permax = np.subtract(lc.time.max(), lc.time.min())
@@ -181,6 +167,23 @@ for system in args.systems:
                               epoch_time=primary_epoch,
                               normalize_phase=True,
                               wrap_phase=u.Quantity(0.75))
+
+
+        # ---------------------------------------------------------------------
+        # Optionally plot the light-curve incl primary eclipse for diagnostics
+        # ---------------------------------------------------------------------
+        if args.plot_lc:
+            fig = plt.figure(figsize=(8, 4), constrained_layout=True)
+            ax = fig.add_subplot(111)
+            lc[[strongest_peak_ix]].scatter(column="delta_mag", ax=ax, 
+                                            marker="x", s=64., linewidth=.5,
+                                            color="k", label="primary eclipse")
+            lc.scatter(column="delta_mag", ax=ax, s=2., label=None)
+            ax.invert_yaxis()
+            ax.get_legend().remove()
+            ax.set(title=f"{system} sector {sector} light-curve",
+                   ylabel="Relative magnitude [mag]")
+            plt.savefig(staging_dir / (file_stem + "_lightcurve.png"), dpi=300)
 
 
         # ---------------------------------------------------------------------
