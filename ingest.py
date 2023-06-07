@@ -205,11 +205,17 @@ for system in args.systems:
         # Predictions for a single model will have shape[1, 7]
         (rA_plus_rB, k, bA, bB, ecosw, esinw, J) = predictions[0, :]
 
+        # Need e, omega and rA to calculate orbital inc
+        omega = np.arctan(np.divide(ecosw, esinw))
+        e = np.divide(ecosw, np.cos(omega))
+        rA = np.divide(rA_plus_rB, np.add(1, k))
+
         # Calculate the orbital inclination from the impact parameter.
         # In training the mae of bA is usually lower, so we'll use that.
-        # TODO: For now assume e == 0 (therefore 1+esinw/1-e^2 ~= 1+esinw)
-        rA = np.divide(rA_plus_rB, np.add(1, k))
-        cosi = np.multiply(np.multiply(rA, bA), np.add(1, esinw))
+        # inc = arccos( bA * rA * [1+esinw]/[1-e^2] )
+        cosi = np.multiply(np.multiply(rA, bA), 
+                           np.divide(np.add(1, esinw), 
+                                     np.subtract(1, np.power(e, 2))))
         inc = np.rad2deg(np.arccos(cosi))
 
 
