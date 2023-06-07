@@ -256,3 +256,4 @@ for system in args.systems:
 
         utils.write_task3_in_file(staging_dir / (file_stem + ".in"), **params)
         utils.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
+        print(f"JKTEBOP dat & in files were written to {staging_dir.resolve()}")
