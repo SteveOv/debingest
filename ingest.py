@@ -150,9 +150,9 @@ for system in args.systems:
         # TODO - find primary epoch - time of best primary eclipse
         #        something like lc.time[lc.flux.argmax()]
         if sector == "0004":
-            primary_epoch = Time(2458415.482922, format="jd", scale="tdb") 
+            primary_epoch = Time(1415.482922, format="btjd", scale="tdb") 
         else:
-            primary_epoch = Time(2459152.142892, format="jd", scale="tdb")
+            primary_epoch = Time(2152.142892, format="btjd", scale="tdb")
 
         # Find the orbital period
         permax = np.subtract(lc.time.max(), lc.time.min())
