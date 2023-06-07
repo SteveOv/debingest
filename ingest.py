@@ -151,7 +151,7 @@ for system in args.systems:
             ax.invert_yaxis()
             ax.get_legend().remove()
             ax.set(title=f"{system} ({tic}) sector {sector}")
-            plt.savefig(staging_dir / (file_stem + ".png"), dpi=300)
+            plt.savefig(staging_dir / (file_stem + "_lightcurve.png"), dpi=300)
 
 
         # ---------------------------------------------------------------------
