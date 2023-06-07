@@ -40,7 +40,6 @@ ap.set_defaults(systems=[], flux_column="sap_flux", quality_bitmask="default",
                 plot_lc=False, plot_fold=False)
 args = ap.parse_args()
 
-quality_threshold = 0
 detrend_sigma_clip = 0.5
 model_phase_bins = 1024
 
