@@ -150,23 +150,32 @@ for system in args.systems:
         strongest_peak_ix = peak_ixs[peak_props["prominences"].argmax()]
         primary_epoch = lc.time[strongest_peak_ix]
 
-        # Find the orbital period
-        permax = np.subtract(lc.time.max(), lc.time.min())
+        # Use a periodogram, restricted to a range based on the 
+        # known peak/eclipse spacing, to find the orbital period. 
+        # LK docs recommend normalize("ppm") and oversample_factor=100.
+        eclipse_diffs = np.diff(lc.time[peak_ixs])
+        max_fr = np.reciprocal(np.min(eclipse_diffs))
+        min_fr = np.reciprocal(np.multiply(np.max(eclipse_diffs), 2))
         pg = lc.normalize(unit="ppm").to_periodogram("ls", 
-                                                     maximum_frequency=1,
-                                                     minimum_frequency=1/permax,
+                                                     maximum_frequency=max_fr,
+                                                     minimum_frequency=min_fr,
                                                      oversample_factor=100)
-        for period_factor in [2]:
-            # Find the period it should be a harmonic of the max-power peak
-            # TODO: try multiples & count peaks? (I know 2 works for CW Eri)
+        
+        # The period should be a harmonic of the periodogram's max-power peak
+        for period_factor in [1., 2.]:
             period = np.multiply(pg.period_at_max_power, period_factor)
 
-            # We need a phase folded LC to sample for the estimation model.  
-            # Rotate the phase so that phase 0 is at the 25% position.
+            # Test it by looking for 2 peaks on a folded LC (having rotated it
+            # so phase 0 is positioned at 0.25). We'll need the folded LC later.
+            # If the test fails we'll fall through on the 2nd harmonic anyway.
             fold_lc = lc.fold(period, 
                               epoch_time=primary_epoch,
                               normalize_phase=True,
                               wrap_phase=u.Quantity(0.75))
+            if len(find_peaks(fold_lc["delta_mag"], 
+                              prominence=(sigma_mag, None),
+                              width=5)[0]) == 2:
+                break
 
 
         # ---------------------------------------------------------------------
