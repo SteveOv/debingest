@@ -19,7 +19,13 @@
             "program": "ingest.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--plot-lc", "--plot-fold", "--flux", "sap_flux", "--systems", "CW Eri"]
+            "args": [
+                "--plot-lc", 
+                "--plot-fold", 
+                "--flux", "sap_flux", 
+                "--quality", "hardest", 
+                "--systems", "CW Eri"
+            ]
         }
     ]
 }

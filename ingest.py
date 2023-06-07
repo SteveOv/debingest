@@ -21,7 +21,12 @@ description = "Ingest pipeline for TESS dEB light-curves. \
 
 ap = argparse.ArgumentParser(description=description)
 ap.add_argument("-f", "--flux", type=str, dest="flux_column",
-                help="The flux column to use sap_flux or pdcsap_flux")
+                help="The flux column to use: sap_flux or pdcsap_flux. \
+                    The default is sap_flux.")
+ap.add_argument("-q", "--quality", type=str, dest="quality_bitmask",
+                help="Quality bitmask to filter out low quality data (may be a \
+                    numerical bitmask or text: none, default, hard, hardest). \
+                    The default value is default.")
 ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
                 action="store_true", required=False,
                 help="Write a plot of each sector's light-curve to a png file")
@@ -31,7 +36,7 @@ ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
 ap.add_argument("-s", "--systems", type=str, dest="systems", 
                 nargs="+", required=True,
                 help="Search identifier for each system to ingest.")
-ap.set_defaults(systems=[], flux_column="sap_flux", 
+ap.set_defaults(systems=[], flux_column="sap_flux", quality_bitmask="default",
                 plot_lc=False, plot_fold=False)
 args = ap.parse_args()
 
@@ -60,8 +65,12 @@ for system in args.systems:
     # Now we will load the acquired data directly from the cache
     # so we're not directly dependent on the previous download
     fits_files = sorted(staging_dir.rglob("tess*_lc.fits"))
-    lcs = LightCurveCollection(
-        [lk.read(f"{f}", flux_column=args.flux_column) for f in fits_files])
+    lcs = LightCurveCollection([
+        lk.read(f"{f}", 
+                flux_column=args.flux_column, 
+                quality_bitmask=args.quality_bitmask) 
+        for f in fits_files
+    ])
 
 
     # ---------------------------------------------------------------------
@@ -74,29 +83,25 @@ for system in args.systems:
         int_time = lc.meta["INT_TIME"] * u.min
         file_stem = f"{sys_label}_s{sector}"
 
-        narrative = f"Processing sector {sector} covering the period of "\
-            f"{lc.meta['DATE-OBS']} to {lc.meta['DATE-END']} with an "\
-            f"integration time of {int_time} over {len(lc)} row(s)."
+        narrative = f"Processing {len(lc)} row(s) {args.flux_column} data "\
+            f"(meeting the quality bitmask of {args.quality_bitmask}) "\
+            f"for {system} sector {sector}. This covers the period of "\
+            f"{lc.meta['DATE-OBS']} to {lc.meta['DATE-END']} "\
+            f"with an integration time of {int_time}."
         print()
         print("\n".join(textwrap.wrap(narrative, 70)))
 
 
         # ---------------------------------------------------------------------
-        # Apply any data filters (NaN, quality, sigma clip, date range)
+        # Apply any additional data filters (NaN, sigma clip, date range)
         # ---------------------------------------------------------------------
-        # TODO: Replace this with setting of quality_bitmask in lk.read() 
-        #       with value from an arg. Logic below is equiv to "hardest". 
-        #       We'll still need to lk.remove_nans() as they break detrending.
+        # We'll still need to filter out NaNs as they may still be present
+        # (only hardest seems to exclude them) and they'll break detrending.
         filter_mask = np.isnan(lc.flux)
         print(f"NaN clip finds {sum(filter_mask.unmasked)} data points.")
-
-        if quality_threshold is not None:
-            quality_mask = lc["quality"] > quality_threshold
-            print(f"Quality clip finds {sum(quality_mask)} data points.")
-            filter_mask |= quality_mask
    
         lc = lc[~filter_mask]
-        print(f"Quality filters mask {sum(filter_mask.unmasked)} "\
+        print(f"Additional filters mask {sum(filter_mask.unmasked)} "\
               f"row(s) leaving {len(lc)}.")
 
 
