@@ -51,7 +51,7 @@ def fit_polynomial(times: Time,
     print(f"Fitting polynomial (degree = {degree}) where x is JD "
         + f"{time_from_jd} to {time_to_jd} (minus pivot at {pivot_jd}). ")
 
-    print(f"\tRunning {iterations} iterations, fitting data with residual "
+    print(f"\tRunning {iterations} iterations fitting data with residual "
         + f"within {res_sigma_clip} sigma.")
     
     fit_mask = [True] * len(ydata)
@@ -64,30 +64,54 @@ def fit_polynomial(times: Time,
         if iter > 1:
             poly_func = np.polynomial.Polynomial(coeffs)
             fit_ydata = poly_func(time_values)
-            residuals = ydata.value - fit_ydata
-            fit_mask &= (np.abs(residuals) <= (np.std(residuals)*res_sigma_clip))
+            resids = ydata.value - fit_ydata
+            fit_mask &= (np.abs(resids) <= (np.std(resids)*res_sigma_clip))
         else:
             if reset_const_coeff:
                 print(f"...final 'const' coeff reset to zero (on request)...")
                 coeffs[0] = 0
             poly_func = np.polynomial.Polynomial(coeffs)
             fit_ydata = poly_func(time_values) * ydata.unit
-            print(f"\tFit complete; y={poly_func} (sigma(y)={np.std(fit_ydata)})")
+            print(f"\tCompleted; y={poly_func} "
+                  + f"(sigma(fit_ydata)={np.std(fit_ydata):.6e})")
 
     return (fit_ydata, coeffs) if include_coeffs else fit_ydata
 
 
-def write_data_to_dat_file(t: LightCurve, 
-                            file_name: Path,
-                            column_names: List[str] = ["time", "delta_mag", "delta_mag_err"],
-                            column_formats: List[Union[str, Callable]] = [lambda t: f"{t.jd-2.4e6:.6f}", "%.6f", "%.6f"],
-                            overwrite: bool = True,
-                            include_headers: bool = False,
-                            comment_prefix: str = "# ",
-                            delimiter: str = "\t"): 
+def write_data_to_dat_file(lc: LightCurve, 
+                           file_name: Path,
+                           column_names: List[str] \
+                            = ["time", "delta_mag", "delta_mag_err"],
+                           column_formats: List[Union[str, Callable]] \
+                            = [lambda t: f"{t.jd-2.4e6:.6f}", "%.6f", "%.6f"],
+                           overwrite: bool = True,
+                           include_headers: bool = False,
+                           comment_prefix: str = "# ",
+                           delimiter: str = "\t"): 
+    """
+    This will write the contents of the passed LightCurve columns to a
+    JKTEBOP compatible delimited dat file.
+
+    !lc! the source LightCurve
+
+    !file_name! the name and location of the file to write
+
+    !column_names! the names of the columns (in lc) to write
+
+    !column_formats! the formats used to write the columns to file text
+
+    !overwrite! whether to overwrite or append to the file
+
+    !include_headers! whether to include a header row
+    
+    !comment_prefix! prefix to use for comments/header row
+
+    !delimiter! the column delimiter to use 
+    """
+
     # If these are not specified default to including all of them.
     if column_names is None:
-        column_names = t.colnames
+        column_names = lc.colnames
     if column_formats is None:
         column_formats = ["%s"] * len(column_names)
 
@@ -97,14 +121,14 @@ def write_data_to_dat_file(t: LightCurve,
                          + "Each column must have an equivalent format.")
 
     formats = dict(zip(column_names, column_formats))
-    columns = [t[column_name] for column_name in column_names]
+    columns = [lc[column_name] for column_name in column_names]
     format = "commented_header" if include_headers else "no_header"
 
     if len(column_names) <= 6:
         column_text = f"columns {column_names}"
     else:
         column_text = f"{len(column_names)} columns"
-    print(f"Writing {len(t)} rows(s), for {column_text}, to '{file_name.name}'")
+    print(f"Writing {len(lc)} rows(s) for {column_text} to '{file_name.name}'")
 
     ascii.write(columns, output = file_name, format = format, 
                 names = column_names, formats = formats, 
@@ -113,8 +137,14 @@ def write_data_to_dat_file(t: LightCurve,
     return
 
 
-def create_task3_in_file(file_name: Path, **params):
+def write_task3_in_file(file_name: Path, **params):
     """
+    Writes a JKTEBOP task3 .in file based on applying the passed params/token
+    values to the task3.in.template file.
+
+    !file_name! the name and path of the file to write
+
+    !params! a dictionary of param tokens/keys and values
     """
     with open(file_name, mode="w") as of:
         with open(Path("./task3.in.template"), "r") as tpf:
@@ -122,6 +152,8 @@ def create_task3_in_file(file_name: Path, **params):
 
         if "file_name_stem" not in params:
             params["file_name_stem"] = file_name.stem
+
+        # Will error if any expected tokens are not present.
         of.write(template.substitute(**params))
         print(f"Writing JKTEBOP task3 in file to '{file_name.name}'")
     return

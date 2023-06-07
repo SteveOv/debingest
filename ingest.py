@@ -233,5 +233,5 @@ for system in args.systems:
             "primary_epoch": primary_epoch.jd - 2.4e6,        
         }
 
-        utils.create_task3_in_file(staging_dir / (file_stem + ".in"), **params)
+        utils.write_task3_in_file(staging_dir / (file_stem + ".in"), **params)
         utils.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
