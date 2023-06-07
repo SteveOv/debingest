@@ -199,12 +199,12 @@ for system in args.systems:
         if args.plot_fold:
             fig = plt.figure(figsize=(8, 4), constrained_layout=True)
             ax = fig.add_subplot(111)
-            fold_lc.scatter(column="delta_mag", ax=ax,
-                            ylabel="Relative Magnitude [mag]")
-            ax.errorbar(phases, mags, fmt="k.", markersize=0.75)
+            fold_lc.scatter(column="delta_mag", ax=ax, s=2., 
+                            alpha=0.25, label=None)
+            ax.scatter(phases, mags, color="k", marker="+", s=8., linewidth=0.5)
             ax.invert_yaxis()
-            ax.get_legend().remove()
-            ax.set(title=f"Folded light-curve of {system} sector {sector}")
+            ax.set(title=f"Folded light-curve of {system} sector {sector}",
+                   ylabel="Relative magnitude [mag]")
             plt.savefig(staging_dir / (file_stem + "_folded.png"), dpi=300)
 
 
