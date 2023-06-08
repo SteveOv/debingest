@@ -4,13 +4,12 @@ import argparse
 import textwrap
 import numpy as np
 from scipy.interpolate.interpolate import interp1d
-from scipy.signal import find_peaks, find_peaks_cwt
 import astropy.units as u
 import lightkurve as lk
 from lightkurve import LightCurveCollection
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
-import utils
+import functions
 
 # -------------------------------------------------------------------
 # Command line will contain a list of systems to ingest and options
@@ -58,7 +57,7 @@ ap.set_defaults(target=None, sectors=[], mission="TESS", author="SPOC",
                 period=None, plot_lc=False, plot_fold=False)
 args = ap.parse_args()
 
-detrend_sigma_clip = 0.5
+detrend_clip = 0.5
 model_phase_bins = 1024
 
 sys_name = args.target
@@ -67,6 +66,7 @@ sys_label = "".join(c for c in sys_name if c not in r':*?"\/<>|').\
     replace(' ', '_')
 staging_dir = Path(f"./staging/{sys_label}")
 staging_dir.mkdir(parents=True, exist_ok=True)
+
 
 # ---------------------------------------------------------------------
 # Use MAST to DL any timeseries/light-curves for the system/sector(s)
@@ -93,6 +93,7 @@ print(f"\nFound {len(lcs)} light-curves for {sys_name} sectors {args.sectors}.")
 if len(lcs):
     # TODO: Arrange a proper location from which to pick up the model.
     model = load_model("./cnn_model.h5")
+
 
 # ---------------------------------------------------------------------
 # Process each of the system's light-curves in turn
@@ -129,68 +130,25 @@ for lc in lcs:
     # Convert to relative mags with fitted polynomial detrending
     # ---------------------------------------------------------------------
     print(f"Detrending & 'zeroing' magnitudes by subtracting polynomial.")
-    lc["delta_mag"] = u.Quantity(-2.5 * np.log10(lc.flux.value) * u.mag)
-    lc["delta_mag_err"] = u.Quantity(
-        2.5 
-        * 0.5
-        * np.abs(
-            np.subtract(
-                np.log10(np.add(lc.flux.value, lc.flux_err.value)),
-                np.log10(np.subtract(lc.flux.value, lc.flux_err.value))
-            )
-        )
-        * u.mag)
-
-    # Quadratic detrending and y-shifting relative to zero 
-    lc["delta_mag"] -= utils.fit_polynomial(
-        lc.time, 
-        lc["delta_mag"], 
-        degree=2, 
-        res_sigma_clip=detrend_sigma_clip, 
-        reset_const_coeff=False)
+    functions.append_magnitude_columns(lc, "delta_mag", "delta_mag_err")
+    lc["delta_mag"] -= functions.fit_polynomial(lc.time, 
+                                                lc["delta_mag"], 
+                                                degree=2, 
+                                                res_sigma_clip=detrend_clip, 
+                                                reset_const_coeff=False)
 
 
     # ---------------------------------------------------------------------
-    # Find the orbital period & primary_epoch and phase fold the light-curve
+    # Find the primary epoch and orbital period
     # ---------------------------------------------------------------------
-    std_mag = np.std(lc["delta_mag"].data)
-    (peak_ixs, peak_props) = find_peaks(lc["delta_mag"], 
-                                        prominence=(std_mag, ), 
-                                        width=5)
-    strongest_peak_ix = peak_ixs[peak_props["prominences"].argmax()]
-    primary_epoch = lc.time[strongest_peak_ix]
-    print(f"The primary epoch (strongest eclipse) is at JD {primary_epoch.jd}")
-
+    (primary_epoch, primary_epoch_ix) = functions.find_primary_epoch(lc)
+    print(f"The primary epoch for sector {sector} is at JD {primary_epoch.jd}")
     if args.period is None:
-        # If no period is specified, derive it from a periodogram restricted 
-        # to a frequency range based on the known peak/eclipse spacing. 
-        # LK docs recommend normalize("ppm") and oversample_factor=100.
-        print(f"No period specified. Choosing one based on eclipse timings.")
-        eclipse_diffs = np.diff(lc.time[peak_ixs])
-        max_fr = np.reciprocal(np.min(eclipse_diffs))
-        min_fr = np.reciprocal(np.multiply(np.max(eclipse_diffs), 2))
-        pg = lc.normalize(unit="ppm").to_periodogram("ls", 
-                                                     maximum_frequency=max_fr,
-                                                     minimum_frequency=min_fr,
-                                                     oversample_factor=100)
-
-        # The period should be a harmonic of the periodogram's max-power peak
-        # Set this candidates up with the most likely last so we fall through.
-        periods = [np.multiply(pg.period_at_max_power, f) for f in [1., 2.]]
+        period = functions.find_period(lc, primary_epoch)
+        print(f"No period specified. Choose {period} based on eclipse timings.")
     else:
-        periods = [args.period * u.d]        
-        print(f"An orbital period of {periods[0]} has been specified.")
-
-    for period in periods:
-        # Test periods by looking for 2 peaks on a folded LC (having rotated it
-        # so phase 0 is positioned at 0.25). We'll need the folded LC later.
-        # If the test fails we'll fall through on the last period option.
-        fold_lc = lc.fold(period, epoch_time=primary_epoch, 
-                          normalize_phase=True, wrap_phase=u.Quantity(0.75))
-        pc = len(find_peaks(fold_lc["delta_mag"], prominence=(std_mag, ), width=5)[0])
-        print(f"\tTesting period {period}: found {pc} distinct peak(s)")
-        if pc == 2:
-            break
+        period = args.period * u.d
+        print(f"An orbital period of {period} was specified by the user.")
 
 
     # ---------------------------------------------------------------------
@@ -199,20 +157,23 @@ for lc in lcs:
     if args.plot_lc:
         fig = plt.figure(figsize=(8, 4), constrained_layout=True)
         ax = fig.add_subplot(111)
-        lc[[strongest_peak_ix]].scatter(column="delta_mag", ax=ax, 
-                                        marker="x", s=64., linewidth=.5,
-                                        color="k", label="primary eclipse")
+        lc[[primary_epoch_ix]].scatter(column="delta_mag", ax=ax, 
+                                       marker="x", s=64., linewidth=.5,
+                                       color="k", label="primary eclipse")
         lc.scatter(column="delta_mag", ax=ax, s=2., label=None)
         ax.invert_yaxis()
         ax.get_legend().remove()
         ax.set(title=f"{sys_name} sector {sector} light-curve",
-                ylabel="Relative magnitude [mag]")
+               ylabel="Relative magnitude [mag]")
         plt.savefig(staging_dir / (file_stem + "_lightcurve.png"), dpi=300)
 
 
     # ---------------------------------------------------------------------
-    # Interpolate the folded data to base our estimated params on
+    # Phase fold the LC & interpolate on the fold to use for our estimates
     # ---------------------------------------------------------------------
+    print(f"Phase folding the LC to get a sample curve for param estimation.")
+    fold_lc = functions.phase_fold_lc(lc, primary_epoch, period, 0.75)
+
     # Now we sample/interpolate the folded LC at 1024 points.
     # So far, linear interpolation is producing lower variance
     min_phase = fold_lc.phase.min()
@@ -220,44 +181,45 @@ for lc in lcs:
     phases = np.linspace(min_phase, min_phase+1., model_phase_bins+1)[:-1]
     mags = interp(phases)
 
+
+    # ---------------------------------------------------------------------
+    # Optionally plot the folded LC overlaid with the interpolated one for diags
+    # ---------------------------------------------------------------------
     if args.plot_fold:
         fig = plt.figure(figsize=(8, 4), constrained_layout=True)
         ax = fig.add_subplot(111)
-        fold_lc.scatter(column="delta_mag", ax=ax, s=2., 
-                        alpha=0.25, label=None)
+        fold_lc.scatter(column="delta_mag", ax=ax, s=2., alpha=0.25, label=None)
         ax.scatter(phases, mags, color="k", marker="+", s=8., linewidth=0.5)
         ax.invert_yaxis()
         ax.set(title=f"Folded light-curve of {sys_name} sector {sector}",
-                ylabel="Relative magnitude [mag]")
+               ylabel="Relative magnitude [mag]")
         plt.savefig(staging_dir / (file_stem + "_folded.png"), dpi=300)
 
 
     # ---------------------------------------------------------------------
     # Use the ML model to estimate system parameters
-    # ---------------------------------------------------------------------
+    # ---------------------------------------------------------------------   
     # Now we can invoke the ML model to interpret the folded data & estimate
     # the parameters for JKTEBOP. Need the mag data in shape[1, 1024, 1]
-    predictions = model.predict(np.array([np.transpose([mags])]), verbose=0)
-
     # Predictions for a single model will have shape[1, 7]
+    print(f"Estimating system parameters.")
+    predictions = model.predict(np.array([np.transpose([mags])]), verbose=0)
     (rA_plus_rB, k, bA, bB, ecosw, esinw, J) = predictions[0, :]
-
-    # Need e, omega and rA to calculate orbital inc
-    omega = np.arctan(np.divide(ecosw, esinw))
-    e = np.divide(ecosw, np.cos(omega))
-    rA = np.divide(rA_plus_rB, np.add(1, k))
 
     # Calculate the orbital inclination from the impact parameter.
     # In training the mae of bA is usually lower, so we'll use that.
     # inc = arccos( bA * rA * [1+esinw]/[1-e^2] )
+    rA = np.divide(rA_plus_rB, np.add(1, k))
+    omega = np.arctan(np.divide(ecosw, esinw))
+    e = np.divide(ecosw, np.cos(omega))
     cosi = np.multiply(np.multiply(rA, bA), 
-                        np.divide(np.add(1, esinw), 
-                                    np.subtract(1, np.power(e, 2))))
+                       np.divide(np.add(1, esinw), 
+                                 np.subtract(1, np.power(e, 2))))
     inc = np.rad2deg(np.arccos(cosi))
 
 
     # ---------------------------------------------------------------------
-    # Generate JKTEBOP .dat and .in file for task3 and invoke.
+    # Generate JKTEBOP .dat and .in file for task3.
     # ---------------------------------------------------------------------
     params = {
         "rA_plus_rB": rA_plus_rB,
@@ -281,6 +243,6 @@ for lc in lcs:
         "primary_epoch": primary_epoch.jd - 2.4e6,
     }
 
-    utils.write_task3_in_file(staging_dir / (file_stem + ".in"), **params)
-    utils.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
+    functions.write_task3_in_file(staging_dir / (file_stem + ".in"), **params)
+    functions.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
     print(f"JKTEBOP dat & in files were written to {staging_dir.resolve()}")

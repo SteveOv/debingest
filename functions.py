@@ -2,19 +2,20 @@ from typing import Union, Tuple, List, Callable
 from pathlib import Path
 from string import Template
 import numpy as np
+from scipy.signal import find_peaks
 from astropy.time import Time
-from astropy.units import Quantity
+import astropy.units as u
 from astropy.io import ascii
-from lightkurve.lightcurve import LightCurve
+from lightkurve.lightcurve import LightCurve, FoldedLightCurve
 
 def fit_polynomial(times: Time, 
-                   ydata: Quantity, 
+                   ydata: u.Quantity, 
                    degree: int = 2, 
                    iterations: int = 2, 
                    res_sigma_clip: float = 1., 
                    reset_const_coeff: bool = False, 
                    include_coeffs: bool = False) \
-                    -> Union[Quantity, Tuple[Quantity, List]]:
+                    -> Union[u.Quantity, Tuple[u.Quantity, List]]:
     """
     Will calculate a polynomial fit over the requested time range and y data
     values. The fit is iterative.  After each iteration the residuals are 
@@ -77,6 +78,123 @@ def fit_polynomial(times: Time,
 
     return (fit_ydata, coeffs) if include_coeffs else fit_ydata
 
+
+def append_magnitude_columns(lc: LightCurve, 
+                             name: str = "delta_mag",
+                             err_name: str = "delta_mag_err"):
+    """
+    This will append a magnitude and corresponding error column
+    to the passed LightCurve.
+
+    !lc! the LightCurve to update
+
+    !name! the name of the new magnitude column
+    
+    !err_name! the name of the corresponding magnitude error column
+    """
+    lc[name] = u.Quantity(-2.5 * np.log10(lc.flux.value) * u.mag)
+    lc[err_name] = u.Quantity(
+        2.5 
+        * 0.5
+        * np.abs(
+            np.subtract(
+                np.log10(np.add(lc.flux.value, lc.flux_err.value)),
+                np.log10(np.subtract(lc.flux.value, lc.flux_err.value))
+            )
+        )
+        * u.mag)
+    return 
+
+
+def find_primary_epoch(lc: LightCurve) -> Tuple[Time, int]:
+    """
+    Will find the primary epoch (Time and index) of the passed LightCurve.
+    This will be the "most prominent" eclipse found.
+    
+    !lc! the LightCurve to interogate
+    """
+    # Look for eclipse peaks in the data. We'll take the most prominent.
+    (peak_ixs, peak_props) = find_eclipses(lc)
+    strongest_peak_ix = peak_ixs[peak_props["prominences"].argmax()]
+    return lc.time[strongest_peak_ix], strongest_peak_ix
+
+
+def find_period(lc: LightCurve, 
+                primary_epoch: Time) -> u.Quantity:
+    """
+    Will find the best estimate of the orbital period for the passed LightCurve.
+
+    !lc! the LightCurve to parse.
+
+    !primary_epoch! the time of the best primary - used to test our findings
+    """
+    # Look for eclipse peaks in the data. Should give us approx periods.
+    (peak_ixs, _) = find_eclipses(lc)
+    eclipse_diffs = np.diff(lc.time[peak_ixs])
+
+    # Now use a periodogram restricted to a frequency range based on 
+    # the known peak/eclipse spacing to find potential period values.
+    # LK docs recommend normalize("ppm") and oversample_factor=100.
+    max_fr = np.reciprocal(np.min(eclipse_diffs))
+    min_fr = np.reciprocal(np.multiply(np.max(eclipse_diffs), 2))
+    pg = lc.normalize(unit="ppm").to_periodogram("ls", 
+                                                 maximum_frequency=max_fr,
+                                                 minimum_frequency=min_fr,
+                                                 oversample_factor=100)
+
+    # The period should be a harmonic of the periodogram's max-power peak
+    # Set this candidates up with the most likely last so we fall through.
+    periods = [np.multiply(pg.period_at_max_power, f) for f in [1., 2.]]
+    for period in periods:
+        # Test periods by looking for 2 peaks on a folded LC. Rotated it so that
+        # primary is at 0.1 to make primary & secondary eclipses distinct.
+        # If the test fails we'll fall through on the last period option.
+        fold_lc = phase_fold_lc(lc, primary_epoch, period, 0.90)
+        eclipse_count = len(find_eclipses(fold_lc)[0])
+        print(f"\tTesting period {period}: found {eclipse_count} eclipse(s)")
+        if eclipse_count == 2:
+            break
+    return period
+
+
+def find_eclipses(lc: LightCurve, width: int = 5) -> Tuple[List[int], dict]:
+    """
+    Will find a list of the indices of the eclipses in the passed LightCurve.
+    Also return a peak_properties dictionary (see scipy.stats.find_peaks)
+
+    !lc! the LightCurve to parse.
+
+    !width! the minimum sample width of any peak
+    """
+    # We'll use a Std Dev as the minimum prominence of any peaks to find.  
+    # Unless the data is very noisey, this should rule out all but eclipses.
+    std_mag = np.std(lc["delta_mag"].data)
+    return find_peaks(lc["delta_mag"], prominence=(std_mag, ), width=width)
+ 
+
+def phase_fold_lc(lc: LightCurve,
+                  primary_epoch: Time,
+                  period: u.Quantity,
+                  wrap_phase: float=0.75) -> FoldedLightCurve:
+    """
+    Perform a normalized phase fold on the passed LightCurve.
+    By default, the primary_epoch/phase 0 will rotated to the 0.25 position.
+
+    !lc! the LightCurve to produce the fold from
+
+    !primary_epoch! the reference to fold around
+
+    !period! the period to fold on
+
+    !wrap_phase! the amout to wrap the fold to control where the primary appears
+    """
+    if not isinstance(wrap_phase, u.Quantity):
+        wrap_phase = u.Quantity(wrap_phase)
+    return lc.fold(period, 
+                   epoch_time=primary_epoch, 
+                   normalize_phase=True, 
+                   wrap_phase=wrap_phase)
+   
 
 def write_data_to_dat_file(lc: LightCurve, 
                            file_name: Path,
