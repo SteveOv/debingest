@@ -20,11 +20,11 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--plot-lc", 
-                "--plot-fold", 
+                "--target", "CW Eri",
                 "--flux", "sap_flux", 
                 "--quality", "hardest", 
-                "--system", "CW Eri"
+                "--plot-lc", 
+                "--plot-fold", 
             ]
         }
     ]

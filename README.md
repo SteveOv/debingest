@@ -19,22 +19,23 @@ context of the `debingest` environment, with example usage shown below;
 ```sh
 $ conda activate debingest
 
-$ python3 ingest.py --flux sap_flux --quality hard --plot-lc --plot-fold --system 'CW Eri' --period 2.72837
+$ python3 ingest.py -t 'CW Eri' -s 4 31 -f sap_flux -q hard -p 2.72837 -pl -pf 
 ```
 where
-- `--flux`/`-f`: the flux data column to use: **sap_flux** or pdcsap_flux
-- `--quality`/`-q`: the quality filter set: none, **default**, hard or hardest
-- `--plot-lc`/`-pl`: instructs the pipeline to plot each lightcurve to a png
-- `--plot-fold`/`-pf`: instructs the pipeline to plot each folded LC to a png
-- `--system`/`-s`: the MAST identifiers for the system to process
-- `--period`/`-p`: the optional orbital period to use - calculated if omitted
+- `-t`/`--target`: required MAST identifier for the target system to process
+- `-s`/`--sectors`: optional list of sectors to find - finds all if omitted
+- `-f`/`--flux`: the flux data column to use: **sap_flux** or pdcsap_flux
+- `-q`/`--quality`: the quality filter set: none, **default**, hard or hardest
+- `-p`/`--period`: the optional orbital period to use - calculated if omitted
+- `-pl`/`--plot-lc`: instructs the pipeline to plot each lightcurve to a png
+- `-pf`/`--plot-fold`: instructs the pipeline to plot each folded LC to a png
 
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
 > you remove the need to specify python3 whenever you run ingest.py.
 
 ## Processing
 The pipeline will carry out the following tasks for the specified system:
-- the MAST portal is queried on the system identifier for TESS/SPOC light-curves
+- the MAST portal is queried on the target/sectors for TESS/SPOC light-curves
 - any located fits files are downloaded
 - for each fits/sector:
   - the fits file is read and filtered based on the `--quality` argument

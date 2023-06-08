@@ -18,72 +18,78 @@ import utils
 description = "An ingest pipeline for TESS dEB light-curves. \
 It searches for available light-curves for the requested identifier \
 via the MAST portal and appropriate fits files are downloaded. \
-\
 For each fits file, the flux data is converted to relative magnitudes, \
 a detrending polynomial is subtracted and some quality filters applied. \
 Subsequently, the primary epoch and orbital period are calculated \
 and a phase folded light-curve is passed to a Machine-learning model for \
 system parameter estimation. \
-\
 Finally, the light-curve is prepared for fitting by JKTEBOP with the \
 relative magnitudes being written to a text dat file and the primary \
 epoch, period and estimated parameters used to create the in file which \
 contains the JKTEBOP processing parameters and instructions."
 
 ap = argparse.ArgumentParser(description=description)
-ap.add_argument("-f", "--flux", type=str, dest="flux_column",
+ap.add_argument("-t", "--target", type=str, dest="target", required=True,
+                help="Search identifier for the system to ingest.")
+ap.add_argument("-s", "--sectors", type=int, nargs="*", dest="sectors",
+                help="Sectors to search for or omit to search on all sectors.")
+#ap.add_argument("-m", "--mission", type=str, dest="mission", default="TESS",
+#                help="The source mission: currently only TESS supported")
+#ap.add_argument("-a", "--author", type=str, dest="author", default="SPOC",
+#                help="The author of the data: currently only SPOC supported")
+ap.add_argument("-f", "--flux", type=str, dest="flux_column",default="sap_flux",
                 help="The flux column to use: sap_flux or pdcsap_flux. \
                     The default is sap_flux.")
 ap.add_argument("-q", "--quality", type=str, dest="quality_bitmask",
                 help="Quality bitmask to filter out low quality data (may be a \
                     numerical bitmask or text: none, default, hard, hardest). \
                     The default value is default.")
+ap.add_argument("-p", "--period", type=np.double, dest="period",
+                help="The period, in days, of the system. If not specified the \
+                    period will be calculated on light-curve eclipse spacing.")
 ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
                 action="store_true", required=False,
                 help="Write a plot of each sector's light-curve to a png file")
 ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
                 action="store_true", required=False,
                 help="Write a plot of each sector folded data to a png file")
-ap.add_argument("-p", "--period", type=np.double, dest="period",
-                help="The period, in days, of the system. If not specified, the \
-                    period will be calculated on light-curve eclipse spacing.")
-ap.add_argument("-s", "--system", type=str, dest="system", required=True,
-                help="Search identifier for each system to ingest.")
-ap.set_defaults(systems=[], flux_column="sap_flux", quality_bitmask="default",
-                plot_lc=False, plot_fold=False, period=None)
+ap.set_defaults(target=None, sectors=[], mission="TESS", author="SPOC", 
+                flux_column="sap_flux", quality_bitmask="default", 
+                period=None, plot_lc=False, plot_fold=False)
 args = ap.parse_args()
 
 detrend_sigma_clip = 0.5
 model_phase_bins = 1024
 
-system = args.system
-sys_label = system.replace(" ", "_").lower()
-
+sys_name = args.target
+sys_label = "".join(c for c in sys_name if c not in r':*?"\/<>|').\
+    lower(). \
+    replace(' ', '_')
 staging_dir = Path(f"./staging/{sys_label}")
 staging_dir.mkdir(parents=True, exist_ok=True)
 
-
 # ---------------------------------------------------------------------
-# Use MAST to DL any TESS SPOC timeseries/light-curves for the system
+# Use MAST to DL any timeseries/light-curves for the system/sector(s)
 # ---------------------------------------------------------------------
-# Could iterate over the results but I'd rather separate the 
-# data aquisition from parsing. Once we have the assets we can
-# comment these lines to avoid the overhead of search/dl on every run
-results = lk.search_lightcurve(system, mission="TESS", author="SPOC")
-results.download_all(download_dir=f"{staging_dir}", cache=True)
+lcs = LightCurveCollection([])
+results = lk.search_lightcurve(target=args.target, sector=args.sectors,
+                               mission=args.mission, author=args.author)
+if results:
+    lcs = results.download_all(download_dir=f"{staging_dir}", cache=True, 
+                               flux_column=args.flux_column, 
+                               quality_bitmask=args.quality_bitmask)
 
-# Now we will load the acquired data directly from the cache
-# so we're not directly dependent on the previous download
-fits_files = sorted(staging_dir.rglob("tess*_lc.fits"))
-print(f"\nFound {len(fits_files)} light-curve files for {system}.")
-lcs = LightCurveCollection([
-    lk.read(f"{f}", 
-            flux_column=args.flux_column, 
-            quality_bitmask=args.quality_bitmask) 
-    for f in fits_files
-])
+# This will load the acquired data directly from the cache so we're not 
+# dependent on search/download above. Useful for testing/dev or if MAST down.
+#fits_files = sorted(staging_dir.rglob("tess*_lc.fits"))
+#lcs = LightCurveCollection([
+#    lk.read(f"{f}", 
+#            flux_column=args.flux_column, 
+#            quality_bitmask=args.quality_bitmask) 
+#    for f in fits_files
+#])
 
-
+print(f"\nFound {len(lcs)} light-curves for {sys_name} sectors {args.sectors}.")
 if len(lcs):
     # TODO: Arrange a proper location from which to pick up the model.
     model = load_model("./cnn_model.h5")
@@ -94,14 +100,14 @@ if len(lcs):
 for lc in lcs: 
     sector = f"{lc.meta['SECTOR']:0>4}"
     tic = f"{lc.meta['OBJECT']}"
-    int_time = lc.meta["INT_TIME"] * u.min
+    frame_time = lc.meta["FRAMETIM"] * u.min
     file_stem = f"{sys_label}_s{sector}"
 
     narrative = f"Processing {len(lc)} row(s) {args.flux_column} data "\
         f"(meeting the quality bitmask of {args.quality_bitmask}) "\
-        f"for {system} sector {sector}. This covers the period of "\
+        f"for {sys_name} sector {sector}. This covers the period of "\
         f"{lc.meta['DATE-OBS']} to {lc.meta['DATE-END']} "\
-        f"with an integration time of {int_time}."
+        f"in bins of {frame_time}."
     print()
     print("\n".join(textwrap.wrap(narrative, 70)))
 
@@ -199,7 +205,7 @@ for lc in lcs:
         lc.scatter(column="delta_mag", ax=ax, s=2., label=None)
         ax.invert_yaxis()
         ax.get_legend().remove()
-        ax.set(title=f"{system} sector {sector} light-curve",
+        ax.set(title=f"{sys_name} sector {sector} light-curve",
                 ylabel="Relative magnitude [mag]")
         plt.savefig(staging_dir / (file_stem + "_lightcurve.png"), dpi=300)
 
@@ -221,7 +227,7 @@ for lc in lcs:
                         alpha=0.25, label=None)
         ax.scatter(phases, mags, color="k", marker="+", s=8., linewidth=0.5)
         ax.invert_yaxis()
-        ax.set(title=f"Folded light-curve of {system} sector {sector}",
+        ax.set(title=f"Folded light-curve of {sys_name} sector {sector}",
                 ylabel="Relative magnitude [mag]")
         plt.savefig(staging_dir / (file_stem + "_folded.png"), dpi=300)
 
