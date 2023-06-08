@@ -19,7 +19,7 @@ context of the `debingest` environment, with example usage shown below;
 ```sh
 $ conda activate debingest
 
-$ python3 ingest.py --flux sap_flux --quality hardest --plot-lc --plot-fold --systems 'CW Eri' 'V505 Per'
+$ python3 ingest.py --flux sap_flux --quality hard --plot-lc --plot-fold --systems 'CW Eri' 'V505 Per'
 ```
 where
 - `--flux` - the flux data column to use: **sap_flux** or pdcsap_flux
@@ -49,4 +49,4 @@ in turn:
     - this is passed to a Machine-Learning model for system parameter estimation
     - if `--plot-fold` both folded light-curves are plotted to a png
   - the filtered light-curve magnitude data is written to a JKTEBOP dat file
-  - the estimated system parameters are used to write a JKTENOP _task 3_ in file
+  - the estimated system parameters are used to write a JKTEBOP _task 3_ in file
