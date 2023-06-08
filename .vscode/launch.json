@@ -24,7 +24,7 @@
                 "--plot-fold", 
                 "--flux", "sap_flux", 
                 "--quality", "hardest", 
-                "--systems", "CW Eri"
+                "--system", "CW Eri"
             ]
         }
     ]
