@@ -184,7 +184,7 @@ for lc in lcs:
     print(f"The primary epoch for sector {sector} is at JD {primary_epoch.jd}")
     if args.period is None:
         period = functions.find_period(lc, primary_epoch)
-        print(f"No period specified. Choose {period} based on eclipse timings.")
+        print(f"No period specified. Found {period} based on eclipse timings.")
     else:
         period = args.period * u.d
         print(f"An orbital period of {period} was specified by the user.")
