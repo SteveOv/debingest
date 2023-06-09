@@ -8,6 +8,39 @@ import astropy.units as u
 from astropy.io import ascii
 from lightkurve.lightcurve import LightCurve, FoldedLightCurve
 
+
+def clip_mask_from_time_range(lc: LightCurve,
+                              time_range: Tuple[np.double, np.double]) \
+                                -> np.ndarray:
+    """
+    Returns a mask over the passed LightCurve for the indicated time range.
+
+    !lc! the LightCurve to mask
+
+    !time_range! the (from, to) time range to mask
+    """
+    time_from = to_time(np.min(time_range), lc)
+    time_to = to_time(np.max(time_range), lc)
+
+    mask = ((lc.time >= time_from) & (lc.time <= time_to))
+    print(f"Clip range over [{time_from.format} {time_from}, "\
+          f"{time_to.format} {time_to}] masks {sum(mask)} row(s).")
+    return mask
+
+
+def to_time(value: Union[int, float, np.double], lc: LightCurve) -> Time:
+    """
+    Converts the passed numeric value to an astropy Time.
+    The magnitude of the time will be used to interpret the format to match LC.
+    """
+    if value < 4e4 and lc.time.format == "btjd":
+        return Time(value, format=lc.time.format, scale=lc.time.scale)
+    else:
+        if value < 2.4e6:
+            value += 2.4e6
+        return Time(value, format="jd", scale=lc.time.scale)
+    
+
 def fit_polynomial(times: Time, 
                    ydata: u.Quantity, 
                    degree: int = 2, 

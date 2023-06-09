@@ -19,7 +19,7 @@ context of the `debingest` environment, with example usage shown below;
 ```sh
 $ conda activate debingest
 
-$ python3 ingest.py -t 'CW Eri' -s 4 31 -f sap_flux -q hard -p 2.72837 -pl -pf 
+$ python3 ingest.py -t 'CW Eri' -s 4 31 -f sap_flux -q hard -p 2.72837 -c 58420.0 58423.0 -pl -pf 
 ```
 where
 - `-t`/`--target`: required MAST identifier for the target system to process
@@ -27,8 +27,14 @@ where
 - `-f`/`--flux`: the flux data column to use: **sap_flux** or pdcsap_flux
 - `-q`/`--quality`: the quality filter set: none, **default**, hard or hardest
 - `-p`/`--period`: the optional orbital period to use - calculated if omitted
+- `-c`/`--clip`: optional time range to clip from any LCs - must have 2 values
 - `-pl`/`--plot-lc`: instructs the pipeline to plot each lightcurve to a png
 - `-pf`/`--plot-fold`: instructs the pipeline to plot each folded LC to a png
+
+The `--clip` argument may be specified multiple times if you require clipping
+of multiple time ranges or sectors. You cannot specify which sectors a clip
+applies to but, as the sectors will have been observed at different times, 
+only those clips that overlap any given sector will have an effect.
 
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
 > you remove the need to specify python3 whenever you run ingest.py.

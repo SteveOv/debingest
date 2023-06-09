@@ -46,6 +46,10 @@ ap.add_argument("-q", "--quality", type=str, dest="quality_bitmask",
 ap.add_argument("-p", "--period", type=np.double, dest="period",
                 help="The period, in days, of the system. If not specified the \
                     period will be calculated on light-curve eclipse spacing.")
+ap.add_argument("-c", "--clip", type=np.double, 
+                nargs=2, dest="clips", action="append",
+                help="A clip time range (from, to) to remove from the \
+                    light-curves prior to processing. Multiple clips allowed.")
 ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
                 action="store_true", required=False,
                 help="Write a plot of each sector's light-curve to a png file")
@@ -54,7 +58,7 @@ ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
                 help="Write a plot of each sector folded data to a png file")
 ap.set_defaults(target=None, sectors=[], mission="TESS", author="SPOC", 
                 flux_column="sap_flux", quality_bitmask="default", 
-                period=None, plot_lc=False, plot_fold=False)
+                period=None, clips=[], plot_lc=False, plot_fold=False)
 args = ap.parse_args()
 
 detrend_clip = 0.5
@@ -114,12 +118,16 @@ for lc in lcs:
 
 
     # ---------------------------------------------------------------------
-    # Apply any additional data filters (NaN, sigma clip, date range)
+    # Apply any additional data filters (NaN, date range)
     # ---------------------------------------------------------------------
     # We'll still need to filter out NaNs as they may still be present
     # (only hardest seems to exclude them) and they'll break detrending.
     filter_mask = np.isnan(lc.flux)
-    print(f"NaN clip finds {sum(filter_mask.unmasked)} data points.")
+    print(f"NaN clip masks {sum(filter_mask.unmasked)} row(s).")
+
+    if args.clips and len(args.clips):
+        for clip in args.clips:
+            filter_mask |= functions.clip_mask_from_time_range(lc, clip)
 
     lc = lc[~filter_mask]
     print(f"Additional filters mask {sum(filter_mask.unmasked)} "\

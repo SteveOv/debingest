@@ -25,6 +25,7 @@
                 "--quality", "hardest", 
                 "--plot-lc", 
                 "--plot-fold", 
+                "--clip", "58420.00", "58423.00"
             ]
         }
     ]
