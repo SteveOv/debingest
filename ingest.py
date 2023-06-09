@@ -30,8 +30,10 @@ contains the JKTEBOP processing parameters and instructions."
 ap = argparse.ArgumentParser(description=description)
 ap.add_argument("-t", "--target", type=str, dest="target", required=True,
                 help="Search identifier for the system to ingest.")
-ap.add_argument("-s", "--sectors", type=int, nargs="*", dest="sectors",
-                help="Sectors to search for or omit to search on all sectors.")
+ap.add_argument("-s", "--sector", type=int, 
+                dest="sectors", action="append", 
+                help="A sector to search for, or omit to search on all sectors.\
+                    Multiple sector arguments supported.")
 #ap.add_argument("-m", "--mission", type=str, dest="mission", default="TESS",
 #                help="The source mission: currently only TESS supported")
 #ap.add_argument("-a", "--author", type=str, dest="author", default="SPOC",
@@ -48,8 +50,8 @@ ap.add_argument("-p", "--period", type=np.double, dest="period",
                     period will be calculated on light-curve eclipse spacing.")
 ap.add_argument("-c", "--clip", type=np.double, 
                 nargs=2, dest="clips", action="append",
-                help="A clip time range (from, to) to remove from the \
-                    light-curves prior to processing. Multiple clips allowed.")
+                help="A clip time range (from, to) to remove from light-curves\
+                    prior to processing. Multiple clip arguments supported.")
 ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
                 action="store_true", required=False,
                 help="Write a plot of each sector's light-curve to a png file")

@@ -21,6 +21,8 @@
             "justMyCode": true,
             "args": [
                 "--target", "CW Eri",
+                "--sector", "4",
+                "--sector", "31",
                 "--flux", "sap_flux", 
                 "--quality", "hardest", 
                 "--plot-lc", 
