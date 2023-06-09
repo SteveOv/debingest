@@ -282,6 +282,17 @@ for lc in lcs:
         "primary_epoch": primary_epoch.jd - 2.4e6,
     }
 
-    functions.write_task3_in_file(staging_dir / (file_stem + ".in"), **params)
+    append_text = []
+    if args.polies:
+        for poly in args.polies:
+            poly_from = functions.to_time(np.min(poly["time_range"]), lc)
+            poly_to = functions.to_time(np.max(poly["time_range"]), lc)
+            if lc.time.min() < poly_from < lc.time.max() \
+                    or lc.time.min() < poly_to < lc.time.max():
+                poly["time_range"] = (poly_from, poly_to)
+                append_text += ["\n" + functions.build_poly_instr(**poly)]
+
+    functions.write_task3_in_file(staging_dir / (file_stem + ".in"), 
+                                  append_text, **params)
     functions.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
     print(f"JKTEBOP dat & in files were written to {staging_dir.resolve()}")
