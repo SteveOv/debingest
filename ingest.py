@@ -2,6 +2,7 @@
 from pathlib import Path
 import argparse
 import textwrap
+import json
 import numpy as np
 from scipy.interpolate.interpolate import interp1d
 import astropy.units as u
@@ -28,8 +29,17 @@ epoch, period and estimated parameters used to create the in file which \
 contains the JKTEBOP processing parameters and instructions."
 
 ap = argparse.ArgumentParser(description=description)
-ap.add_argument("-t", "--target", type=str, dest="target", required=True,
+
+# Must have 1 of these two. User must specify the target (& all other args) at
+# the command line or specify a json file (& the args are read from file with
+# overrides from the command line where given in both [specific code for this]).
+group = ap.add_mutually_exclusive_group(required=True)
+group.add_argument("-t", "--target", type=str, dest="target",
                 help="Search identifier for the system to ingest.")
+group.add_argument("-f", "--file", type=Path, dest="file",
+                help="Search identifier for the system to ingest.")
+
+# These are not part of the group above
 ap.add_argument("-s", "--sector", type=int, 
                 dest="sectors", action="append", 
                 help="A sector to search for, or omit to search on all sectors.\
@@ -38,7 +48,8 @@ ap.add_argument("-s", "--sector", type=int,
 #                help="The source mission: currently only TESS supported")
 #ap.add_argument("-a", "--author", type=str, dest="author", default="SPOC",
 #                help="The author of the data: currently only SPOC supported")
-ap.add_argument("-f", "--flux", type=str, dest="flux_column",default="sap_flux",
+ap.add_argument("-fl", "--flux", type=str, 
+                dest="flux_column", default="sap_flux",
                 help="The flux column to use: sap_flux or pdcsap_flux. \
                     The default is sap_flux.")
 ap.add_argument("-q", "--quality", type=str, dest="quality_bitmask",
@@ -58,10 +69,28 @@ ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
 ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
                 action="store_true", required=False,
                 help="Write a plot of each sector folded data to a png file")
-ap.set_defaults(target=None, sectors=[], mission="TESS", author="SPOC", 
+ap.set_defaults(target=None, file=None, 
+                sectors=[], mission="TESS", author="SPOC", 
                 flux_column="sap_flux", quality_bitmask="default", 
                 period=None, clips=[], plot_lc=False, plot_fold=False)
 args = ap.parse_args()
+
+
+# ---------------------------------------------------------------------
+# Handle setting up the pipeline processing configuration
+# ---------------------------------------------------------------------
+if args.target is not None:
+    print(f"Configuring pipeline based on command line arguments")
+else:
+    print(f"Configuring pipeline from {args.file} & any command line overrides")
+    # Read the JSON file and use it as the basis of our pipeline arguments but
+    # with overrides from the command line arguments to apply missing default
+    # values or otherwise override where non-default values have been given.
+    with open(args.file, "r") as f:
+        file_args = json.load(f)
+        overrides = {k: v for k, v in vars(args).items() 
+                     if k not in file_args or ap.get_default(k) != v}
+        args = argparse.Namespace(**{**file_args, **overrides})
 
 detrend_clip = 0.5
 model_phase_bins = 1024

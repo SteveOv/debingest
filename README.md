@@ -19,12 +19,12 @@ context of the `debingest` environment, with example usage shown below;
 ```sh
 $ conda activate debingest
 
-$ python3 ingest.py -t 'CW Eri' -s 4 -s 31 -f sap_flux -q hard -p 2.72837 -c 58420.0 58423.0 -pl -pf 
+$ python3 ingest.py -t 'CW Eri' -s 4 -s 31 -fl sap_flux -q hard -p 2.72837 -c 58420.0 58423.0 -pl -pf 
 ```
 where
 - `-t`/`--target`: required MAST identifier for the target system to process
 - `-s`/`--sector`: an optional sector to find - finds all if omitted
-- `-f`/`--flux`: the flux data column to use: **sap_flux** or pdcsap_flux
+- `-fl`/`--flux`: the flux data column to use: **sap_flux** or pdcsap_flux
 - `-q`/`--quality`: the quality filter set: none, **default**, hard or hardest
 - `-p`/`--period`: the optional orbital period to use - calculated if omitted
 - `-c`/`--clip`: optional time range to clip from any LCs - must have 2 values
@@ -39,6 +39,48 @@ The `-c` or `--clip` argument may be specified multiple times if you require
 clipping of multiple time ranges or sectors. You cannot specify which sectors 
 a clip applies to but, as the sectors will have been observed at different 
 times, only those sectors that overlap a given clip will be affected.
+
+**Alternatively** the pipeline parameters can be set up in a json file and 
+passed to ingest.py with the following:
+
+```sh
+$ python3 ingest.py -f example/cw_eri.json
+```
+where
+- `-f`/`--file`: is the file to load the pipeline parameters from.
+
+With the following being the contents of cw_eri.json equivalent to the above
+command line arguments (with the same default values and behaviour). 
+
+```json
+{
+    "target": "CW Eri",
+    "sectors": [
+        4,
+        31
+    ],
+    "flux_column": "sap_flux",
+    "quality_bitmask": "hard",
+    "clips": [
+        [58420.0, 58423.0]
+    ],
+    "period": 2.72837,
+    "plot_lc": true,
+    "plot_fold": true
+}
+```
+
+The file/json approach has the benefit that the parameters are persistent 
+making it less furstrating and safer to set up complex or large parameter sets
+than on the command line. There is the added benefit that the parameter file 
+can be stored in a source control or document repository alongside other assets.
+
+There is explicit support for overriding parameter file values with the command
+line. The example below shows the quality bitmask in the file above being
+overriden with the value hardest.
+```sh
+$ python3 ingest.py -f example/cw_eri.json -q hardest
+```
 
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
 > you remove the need to specify python3 whenever you run ingest.py.

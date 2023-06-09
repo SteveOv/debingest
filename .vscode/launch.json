@@ -13,7 +13,7 @@
             "justMyCode": true
         },
         {
-            "name": "Python: ingest.py",
+            "name": "Python: ingest.py -t 'CW Eri'",
             "type": "python",
             "request": "launch",
             "program": "ingest.py",
@@ -28,6 +28,18 @@
                 "--plot-lc", 
                 "--plot-fold", 
                 "--clip", "58420.00", "58423.00"
+            ]
+        },
+        {
+            "name": "Python: ingest.py -f ./example/cw_eri.json",
+            "type": "python",
+            "request": "launch",
+            "program": "ingest.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--file", "./example/cw_eri.json",
+                "--period", "2.72837"
             ]
         }
     ]

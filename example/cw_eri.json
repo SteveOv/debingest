@@ -1,0 +1,15 @@
+{
+    "target": "CW Eri",
+    "sectors": [
+        4,
+        31
+    ],
+    "flux_column": "sap_flux",
+    "quality_bitmask": "hardest",
+    "clips": [
+        [58420.00, 58423.00]
+    ],
+    "period": 2.0,
+    "plot_lc": true,
+    "plot_fold": true
+}
