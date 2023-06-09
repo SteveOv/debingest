@@ -3,8 +3,8 @@
 ## Detached Eclipsing Binary Light-curve ingest pipeline
 
 This code base was developed in VSCode (on Ubuntu) within and an **Anaconda** 
-environment named **debingest** configured to run _Python 3.8_.  
-The configuration of the evironment is in `environment.yml`.
+environment named **debingest** configured to run _Python 3.8_. The 
+configuration of the evironment is in `environment.yml`.
 
 Set up the environment, having first cloned the GitHub repo, by kicking off a 
 new Terminal and running the following (tested on Ubuntu 22.04);
@@ -54,19 +54,19 @@ command line arguments (with the same default values and behaviour).
 
 ```json
 {
-    "target": "CW Eri",
-    "sectors": [
-        4,
-        31
-    ],
-    "flux_column": "sap_flux",
-    "quality_bitmask": "hard",
-    "clips": [
-        [58420.0, 58423.0]
-    ],
-    "period": 2.72837,
-    "plot_lc": true,
-    "plot_fold": true
+  "target": "CW Eri",
+  "sectors": [
+    4,
+    31
+  ],
+  "flux_column": "sap_flux",
+  "quality_bitmask": "hard",
+  "clips": [
+    [58420.0, 58423.0]
+  ],
+  "period": 2.72837,
+  "plot_lc": true,
+  "plot_fold": true
 }
 ```
 
@@ -78,8 +78,27 @@ can be stored in a source control or document repository alongside other assets.
 There is explicit support for overriding parameter file values with the command
 line. The example below shows the quality bitmask in the file above being
 overriden with the value hardest.
+
 ```sh
 $ python3 ingest.py -f example/cw_eri.json -q hardest
+```
+
+The json file adds support for configuration that would be difficult with 
+the command line arguments. Currently this is limited to setting up poly
+fitting instructions in the JKTEBOP in files produced.  An example of the
+additional json file settings is shown below.
+
+```json
+{
+
+  "polies": [
+    { "term": "sf", "degree": 1, "time_range": [58410.00, 58420.00] },
+    { "term": "sf", "degree": 1, "time_range": [58424.00, 58437.00] },
+    { "term": "sf", "degree": 1, "time_range": [59144.00, 59157.70] },
+    { "term": "sf", "degree": 1, "time_range": [59158.00, 59170.50] }
+  ]
+
+}
 ```
 
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 

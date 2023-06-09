@@ -39,7 +39,7 @@
             "justMyCode": true,
             "args": [
                 "--file", "./example/cw_eri.json",
-                "--period", "2.72837"
+                "--quality", "hardest"
             ]
         }
     ]

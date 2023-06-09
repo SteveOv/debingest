@@ -9,7 +9,13 @@
     "clips": [
         [58420.00, 58423.00]
     ],
-    "period": 2.0,
+    "period": 2.72837093,
+    "polies": [
+        { "term": "sf", "degree": 1, "time_range": [58410.00, 58420.00] },
+        { "term": "sf", "degree": 1, "time_range": [58424.00, 58437.00] },
+        { "term": "sf", "degree": 1, "time_range": [59144.00, 59157.70] },
+        { "term": "sf", "degree": 1, "time_range": [59158.00, 59170.50] }
+    ],  
     "plot_lc": true,
     "plot_fold": true
 }

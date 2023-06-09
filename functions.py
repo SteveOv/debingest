@@ -28,12 +28,14 @@ def clip_mask_from_time_range(lc: LightCurve,
     return mask
 
 
-def to_time(value: Union[int, float, np.double], lc: LightCurve) -> Time:
+def to_time(value: Union[int, float, np.double, Time], lc: LightCurve) -> Time:
     """
     Converts the passed numeric value to an astropy Time.
     The magnitude of the time will be used to interpret the format to match LC.
     """
-    if value < 4e4 and lc.time.format == "btjd":
+    if isinstance(value, Time):
+        return value
+    elif value < 4e4 and lc.time.format == "btjd":
         return Time(value, format=lc.time.format, scale=lc.time.scale)
     else:
         if value < 2.4e6:
@@ -288,7 +290,7 @@ def write_data_to_dat_file(lc: LightCurve,
     return
 
 
-def write_task3_in_file(file_name: Path, **params):
+def write_task3_in_file(file_name: Path, append_lines: List[str]=[], **params):
     """
     Writes a JKTEBOP task3 .in file based on applying the passed params/token
     values to the task3.in.template file.
@@ -306,5 +308,31 @@ def write_task3_in_file(file_name: Path, **params):
 
         # Will error if any expected tokens are not present.
         of.write(template.substitute(**params))
+
+        # Add on any lines to be appended to the file
+        if append_lines:
+            # Newline so we don't append directly onto current final line.
+            of.write("\n")
+            of.writelines(append_lines)
         print(f"Writing JKTEBOP task3 in file to '{file_name.name}'")
     return
+
+
+def build_poly_instr(time_range: Tuple[Time, Time],
+                     term: str = "sf",
+                     degree: int = 1) -> str:
+    """
+    Builds up and returns a JKTEBOP 'in' file fitted poly instruction
+
+    !time_range! the (from, to) range to fit it over - will pivot on the mean
+
+    !term! the term to fit - defaults to sf
+
+    !degree! the degree of the polynomial to fit - defaults to 1 (linear)
+    """
+    fit_flags = ' '.join(["1" if coef <= degree else "0" for coef in range(6)])
+    time_from = np.min(time_range).jd - 2.4e6
+    time_to = np.max(time_range).jd - 2.4e6
+    pivot = np.mean([time_from, time_to])
+    return f"poly  {term}  {pivot:.2f}  0.0 0.0 0.0 0.0 0.0 0.0  " \
+            f"{fit_flags}  {time_from:.2f} {time_to:.2f}"
