@@ -149,12 +149,13 @@ for lc in lcs:
 
 
     # ---------------------------------------------------------------------
-    # Apply any additional data filters (NaN, date range)
+    # Apply any additional data filters (NaN/negative fluxes, date range)
     # ---------------------------------------------------------------------
-    # We'll still need to filter out NaNs as they may still be present
-    # (only hardest seems to exclude them) and they'll break detrending.
+    # We'll still need to filter out NaN & negative fluxes as they may still be 
+    # present (only hardest seems to exclude them) and they'll break detrending.
     filter_mask = np.isnan(lc.flux)
-    print(f"NaN clip masks {sum(filter_mask.unmasked)} row(s).")
+    filter_mask |= lc.flux < 0
+    print(f"NaN/negative flux clip masks {sum(filter_mask.unmasked)} row(s).")
 
     if args.clips and len(args.clips):
         for clip in args.clips:

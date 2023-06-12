@@ -1,0 +1,19 @@
+{
+    "target": "V455 Aur",
+    "sectors": [
+    ],
+    "flux_column": "sap_flux",
+    "quality_bitmask": "default",
+    "clips": [
+        [59954, 59956.3]
+    ],
+    "period": 3.145777,
+    "polies": [
+        { "term": "sf", "degree": 1, "time_range": [58842.0, 58855.0] },
+        { "term": "sf", "degree": 1, "time_range": [58857.5, 58869.0] },
+        { "term": "sf", "degree": 1, "time_range": [59938.5, 29950.0] },
+        { "term": "sf", "degree": 1, "time_range": [59956.0, 58863.0] }
+    ],  
+    "plot_lc": true,
+    "plot_fold": true
+}
