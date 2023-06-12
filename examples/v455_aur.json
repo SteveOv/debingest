@@ -3,7 +3,8 @@
     "sectors": [
     ],
     "flux_column": "sap_flux",
-    "quality_bitmask": "default",
+    "exptime": "short",
+    "quality_bitmask": "hard",
     "clips": [
         [59954, 59956.3]
     ],

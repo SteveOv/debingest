@@ -25,6 +25,7 @@ where
 - `-t`/`--target`: required MAST identifier for the target system to process
 - `-s`/`--sector`: an optional sector to find - finds all if omitted
 - `-fl`/`--flux`: the flux data column to use: **sap_flux** or pdcsap_flux
+- `-e`/`--exptime`: optionally filter on exposure time: long, short or fast
 - `-q`/`--quality`: the quality filter set: none, **default**, hard or hardest
 - `-p`/`--period`: the optional orbital period to use - calculated if omitted
 - `-c`/`--clip`: optional time range to clip from any LCs - must have 2 values

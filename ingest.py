@@ -56,6 +56,9 @@ ap.add_argument("-q", "--quality", type=str, dest="quality_bitmask",
                 help="Quality bitmask to filter out low quality data (may be a \
                     numerical bitmask or text: none, default, hard, hardest). \
                     The default value is default.")
+ap.add_argument("-e", "--exptime", type=str, dest="exptime",
+                help="Exposure time/cadence: set to long, short, fast or an \
+                    exact time in seconds. If omitted Will retrieve all.")
 ap.add_argument("-p", "--period", type=np.double, dest="period",
                 help="The period, in days, of the system. If not specified the \
                     period will be calculated on light-curve eclipse spacing.")
@@ -70,7 +73,7 @@ ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
                 action="store_true", required=False,
                 help="Write a plot of each sector folded data to a png file")
 ap.set_defaults(target=None, file=None, 
-                sectors=[], mission="TESS", author="SPOC", 
+                sectors=[], mission="TESS", author="SPOC", exptime=None,
                 flux_column="sap_flux", quality_bitmask="default", 
                 period=None, clips=[], plot_lc=False, plot_fold=False)
 args = ap.parse_args()
@@ -108,7 +111,8 @@ staging_dir.mkdir(parents=True, exist_ok=True)
 # ---------------------------------------------------------------------
 lcs = LightCurveCollection([])
 results = lk.search_lightcurve(target=args.target, sector=args.sectors,
-                               mission=args.mission, author=args.author)
+                               mission=args.mission, author=args.author,
+                               exptime=args.exptime)
 if results:
     lcs = results.download_all(download_dir=f"{staging_dir}", cache=True, 
                                flux_column=args.flux_column, 
@@ -124,7 +128,7 @@ if results:
 #    for f in fits_files
 #])
 
-print(f"\nFound {len(lcs)} light-curves for {sys_name} sectors {args.sectors}.")
+print(f"\nFound {len(lcs)} light-curves for {sys_name} sectors {lcs.sector}.")
 if len(lcs):
     # TODO: Arrange a proper location from which to pick up the model.
     model = load_model("./cnn_model.h5")
@@ -133,17 +137,18 @@ if len(lcs):
 # ---------------------------------------------------------------------
 # Process each of the system's light-curves in turn
 # ---------------------------------------------------------------------
-for lc in lcs: 
+for lc in lcs:  
     sector = f"{lc.meta['SECTOR']:0>4}"
     tic = f"{lc.meta['OBJECT']}"
-    frame_time = lc.meta["FRAMETIM"] * u.min
+    int_time = (lc.meta["INT_TIME"] + lc.meta["READTIME"]) * u.min
     file_stem = f"{sys_label}_s{sector}"
 
     narrative = f"Processing {len(lc)} row(s) {args.flux_column} data "\
         f"(meeting the quality bitmask of {args.quality_bitmask}) "\
-        f"for {sys_name} sector {sector}. This covers the period of "\
+        f"for {sys_name} sector {sector} (camera {lc.meta['CAMERA']} / "\
+        f"CCD {lc.meta['CCD']}). This covers the period of "\
         f"{lc.meta['DATE-OBS']} to {lc.meta['DATE-END']} "\
-        f"in bins of {frame_time}."
+        f"with an integration time of {int_time.to(u.s)}."
     print()
     print("\n".join(textwrap.wrap(narrative, 70)))
 
