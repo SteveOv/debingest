@@ -40,6 +40,9 @@ clipping of multiple time ranges or sectors. You cannot specify which sectors
 a clip applies to but, as the sectors will have been observed at different 
 times, only those sectors that overlap a given clip will be affected.
 
+> If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
+> you remove the need to specify python3 whenever you run ingest.py.
+
 **Alternatively** the pipeline parameters can be set up in a json file and 
 passed to ingest.py with the following:
 
@@ -80,7 +83,7 @@ line. The example below shows the quality bitmask in the file above being
 overriden with the value hardest.
 
 ```sh
-$ python3 ingest.py -f example/cw_eri.json -q hardest
+$ python3 ingest.py -f examples/cw_eri.json -q hardest
 ```
 
 The json file adds support for configuration that would be difficult with 
@@ -101,8 +104,8 @@ additional json file settings is shown below.
 }
 ```
 
-> If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
-> you remove the need to specify python3 whenever you run ingest.py.
+> The time values for clip or poly ranges will be interpreted as BTJD (<40,000), 
+> reduced JD (<2.4e6) or JD >= 2.4e6. 
 
 ## Processing
 The pipeline will carry out the following tasks for the specified system:
@@ -110,7 +113,8 @@ The pipeline will carry out the following tasks for the specified system:
 - any located fits files are downloaded
 - for each fits/sector:
   - the fits file is read and filtered based on the `--quality` argument
-  - the data is further filtered removing rows where the `--flux` column is NaN
+  - the data is filtered removing rows where the `--flux` column is NaN
+  - the `--clip` ranges are applied - any data within these are removed
   - magnitudes are calculated from the `--flux` and corresponding error columns
     - a low order polynomial is subtracted to detrend the data
     - this also y-shifts the data so that the magnitudes are relative to zero
