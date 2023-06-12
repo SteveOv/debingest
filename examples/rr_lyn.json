@@ -1,0 +1,18 @@
+{
+    "target": "RR Lyn",
+    "sectors": [
+    ],
+    "flux_column": "sap_flux",
+    "quality_bitmask": "hardest",
+    "clips": [
+    ],
+    "period": 9.945120,
+    "polies": [
+        { "term": "sf", "degree": 1, "time_range": [58842.0, 58855.0] },
+        { "term": "sf", "degree": 1, "time_range": [58856.0, 58869.0] },
+        { "term": "sf", "degree": 1, "time_range": [59939.0, 59950.0] },
+        { "term": "sf", "degree": 1, "time_range": [59954.5, 59963.0] }
+    ],  
+    "plot_lc": true,
+    "plot_fold": true
+}
