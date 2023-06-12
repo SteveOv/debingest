@@ -75,7 +75,8 @@ ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
 ap.set_defaults(target=None, file=None, 
                 sectors=[], mission="TESS", author="SPOC", exptime=None,
                 flux_column="sap_flux", quality_bitmask="default", 
-                period=None, clips=[], plot_lc=False, plot_fold=False)
+                period=None, clips=[], plot_lc=False, plot_fold=False,
+                sys_name=None)
 args = ap.parse_args()
 
 
@@ -98,11 +99,11 @@ else:
 detrend_clip = 0.5
 model_phase_bins = 1024
 
-sys_name = args.target
-sys_label = "".join(c for c in sys_name if c not in r':*?"\/<>|').\
+sys_name = args.sys_name if args.sys_name else args.target
+sys_file_label = "".join(c for c in sys_name if c not in r':*?"\/<>|').\
     lower(). \
     replace(' ', '_')
-staging_dir = Path(f"./staging/{sys_label}")
+staging_dir = Path(f"./staging/{sys_file_label}")
 staging_dir.mkdir(parents=True, exist_ok=True)
 
 
@@ -141,16 +142,16 @@ for lc in lcs:
     sector = f"{lc.meta['SECTOR']:0>4}"
     tic = f"{lc.meta['OBJECT']}"
     int_time = (lc.meta["INT_TIME"] + lc.meta["READTIME"]) * u.min
-    file_stem = f"{sys_label}_s{sector}"
+    file_stem = f"{sys_file_label}_s{sector}"
 
-    narrative = f"Processing {len(lc)} row(s) {args.flux_column} data "\
+    narrative = f"Processing {len(lc)} row(s) of {args.flux_column} data "\
         f"(meeting the quality bitmask of {args.quality_bitmask}) "\
-        f"for {sys_name} sector {sector} (camera {lc.meta['CAMERA']} / "\
-        f"CCD {lc.meta['CCD']}). This covers the period of "\
-        f"{lc.meta['DATE-OBS']} to {lc.meta['DATE-END']} "\
+        f"for {sys_name} ({lc.meta['OBJECT']}) sector {sector} "\
+        f"(camera {lc.meta['CAMERA']}/CCD {lc.meta['CCD']}). This covers the "\
+        f"period of {lc.meta['DATE-OBS']} to {lc.meta['DATE-END']} "\
         f"with an integration time of {int_time.to(u.s)}."
     print()
-    print("\n".join(textwrap.wrap(narrative, 70)))
+    print("\n".join(textwrap.wrap(narrative, 75)))
 
 
     # ---------------------------------------------------------------------
