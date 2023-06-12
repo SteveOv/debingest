@@ -201,6 +201,9 @@ for lc in lcs:
                                        color="k", label="primary eclipse")
         lc.scatter(column="delta_mag", ax=ax, s=2., label=None)
         ax.invert_yaxis()
+        ax.minorticks_on()
+        ax.tick_params(axis="both", which="both", direction="in",
+                       bottom=True, top=True, left=True, right=True)
         ax.get_legend().remove()
         ax.set(title=f"{sys_name} sector {sector} light-curve",
                ylabel="Relative magnitude [mag]")
@@ -230,6 +233,9 @@ for lc in lcs:
         fold_lc.scatter(column="delta_mag", ax=ax, s=2., alpha=0.25, label=None)
         ax.scatter(phases, mags, color="k", marker="+", s=8., linewidth=0.5)
         ax.invert_yaxis()
+        ax.minorticks_on()
+        ax.tick_params(axis="both", which="both", direction="in", 
+                       bottom=True, top=True, left=True, right=True)
         ax.set(title=f"Folded light-curve of {sys_name} sector {sector}",
                ylabel="Relative magnitude [mag]")
         plt.savefig(staging_dir / (file_stem + "_folded.png"), dpi=300)
