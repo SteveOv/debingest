@@ -31,15 +31,14 @@
             ]
         },
         {
-            "name": "Python: ingest.py -f ./example/cw_eri.json",
+            "name": "Python: ingest.py -f ./examples/cw_eri.json",
             "type": "python",
             "request": "launch",
             "program": "ingest.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--file", "./example/cw_eri.json",
-                "--quality", "hardest"
+                "--file", "./examples/cw_eri.json"
             ]
         }
     ]
