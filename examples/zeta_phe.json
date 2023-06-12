@@ -1,0 +1,19 @@
+{
+    "target": "Zeta Phe",
+    "sectors": [
+    ],
+    "flux_column": "sap_flux",
+    "exptime": "short",
+    "quality_bitmask": "hardest",
+    "clips": [
+    ],
+    "period": 1.66977,
+    "polies": [
+        { "term": "sf", "degree": 1, "time_range": [58354.0, 58367.5] },
+        { "term": "sf", "degree": 1, "time_range": [58368.0, 58382.0] },
+        { "term": "sf", "degree": 1, "time_range": [59088.0, 59100.0] },
+        { "term": "sf", "degree": 1, "time_range": [59102.0, 59114.0] }
+    ],  
+    "plot_lc": true,
+    "plot_fold": true
+}
