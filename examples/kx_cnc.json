@@ -1,0 +1,18 @@
+{
+    "target": "TIC 332146607",
+    "sys_name": "KX Cnc",
+    "sectors": [
+        21
+    ],
+    "flux_column": "sap_flux",
+    "quality_bitmask": "hardest",
+    "clips": [
+    ],
+    "period": 31.2198786,
+    "polies": [
+        { "term": "sf", "degree": 1, "time_range": [58870.0, 58885.0] },
+        { "term": "sf", "degree": 1, "time_range": [58886.0, 58897.0] }
+    ],  
+    "plot_lc": true,
+    "plot_fold": true
+}

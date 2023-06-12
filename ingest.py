@@ -4,7 +4,6 @@ import argparse
 import textwrap
 import json
 import numpy as np
-from scipy.interpolate.interpolate import interp1d
 import astropy.units as u
 import lightkurve as lk
 from lightkurve import LightCurveCollection
@@ -222,13 +221,7 @@ for lc in lcs:
     # ---------------------------------------------------------------------
     print(f"Phase folding the LC to get a sample curve for param estimation.")
     fold_lc = functions.phase_fold_lc(lc, primary_epoch, period, 0.75)
-
-    # Now we sample/interpolate the folded LC at 1024 points.
-    # So far, linear interpolation is producing lower variance
-    min_phase = fold_lc.phase.min()
-    interp = interp1d(fold_lc.phase, fold_lc["delta_mag"], kind="linear")
-    phases = np.linspace(min_phase, min_phase+1., model_phase_bins+1)[:-1]
-    mags = interp(phases)
+    (phases, mags) = functions.get_reduced_folded_lc(fold_lc, model_phase_bins)
 
 
     # ---------------------------------------------------------------------
@@ -237,8 +230,8 @@ for lc in lcs:
     if args.plot_fold:
         fig = plt.figure(figsize=(8, 4), constrained_layout=True)
         ax = fig.add_subplot(111)
-        fold_lc.scatter(column="delta_mag", ax=ax, s=2., alpha=0.25, label=None)
-        ax.scatter(phases, mags, color="k", marker="+", s=8., linewidth=0.5)
+        fold_lc.scatter(column="delta_mag", ax=ax, s=4, alpha=0.25, label=None)
+        ax.scatter(phases, mags, c="k", marker="+", s=8, alpha=.5, linewidth=.5)
         ax.invert_yaxis()
         ax.minorticks_on()
         ax.tick_params(axis="both", which="both", direction="in", 

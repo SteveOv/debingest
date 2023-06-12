@@ -3,6 +3,7 @@ from pathlib import Path
 from string import Template
 import numpy as np
 from scipy.signal import find_peaks
+from scipy.interpolate.interpolate import interp1d
 from astropy.time import Time
 import astropy.units as u
 from astropy.io import ascii
@@ -212,8 +213,9 @@ def phase_fold_lc(lc: LightCurve,
                   period: u.Quantity,
                   wrap_phase: float=0.75) -> FoldedLightCurve:
     """
-    Perform a normalized phase fold on the passed LightCurve.
-    By default, the primary_epoch/phase 0 will rotated to the 0.25 position.
+    Perform a normalized phase fold on the passed LightCurve. By default, the
+    primary_epoch (phase 0) will rotated to the 0.25 position giving returned 
+    phase coverage of [-0.25, 0.75).
 
     !lc! the LightCurve to produce the fold from
 
@@ -230,6 +232,47 @@ def phase_fold_lc(lc: LightCurve,
                    normalize_phase=True, 
                    wrap_phase=wrap_phase)
    
+
+def get_reduced_folded_lc(flc: FoldedLightCurve, 
+                          num_bins: int = 1024,
+                          flc_rollover: int = 200) \
+                                -> Tuple[u.Quantity, u.Quantity]:
+    """
+    A data reduction function which gets a reduced set of phase folded 
+    delta magnitude data in equal size bins of the requested number. 
+    
+    The data is sourced by sampling the passed FoldedLightCurve.  In case this 
+    does not extend over a complete phase, rows are copied over from opposite
+    ends of the phase space data to extend the coverage.  The number of rows 
+    copied is controlled by the flc_rollover argument.
+
+    !flc! the source FoldedLightCurve
+
+    !num_bins! the number of equally spaced rows to return
+
+    !flc_rollover! the number of row to extend the ends of the source phases by
+
+    returns a tuple with requested number or phases and delta magnitudes
+    """
+    source_phases = np.concatenate([
+        flc.phase[-flc_rollover:] -1., 
+        flc.phase, 
+        flc.phase[:flc_rollover] +1.
+    ])
+
+    source_delta_mags = np.concatenate([
+        flc["delta_mag"][-flc_rollover:], 
+        flc["delta_mag"],
+        flc["delta_mag"][:flc_rollover] 
+    ])
+
+    min_phase = np.max((u.Quantity(-0.25), source_phases.min()))
+    interp = interp1d(source_phases, source_delta_mags, kind="linear")
+
+    reduced_phases = np.linspace(min_phase, min_phase + 1., num_bins + 1)[:-1]
+    reduced_mags = interp(reduced_phases)
+    return (reduced_phases, reduced_mags)
+
 
 def write_data_to_dat_file(lc: LightCurve, 
                            file_name: Path,
