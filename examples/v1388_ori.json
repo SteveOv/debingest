@@ -1,0 +1,19 @@
+{
+    "target": "V1388 Ori",
+    "sectors": [
+    ],
+    "flux_column": "sap_flux",
+    "exptime": "short",
+    "quality_bitmask": "hardest",
+    "clips": [
+    ],
+    "period": 2.18703,
+    "polies": [
+        { "term": "sf", "degree": 1, "time_range": [59473.5, 59486.0] },
+        { "term": "sf", "degree": 1, "time_range": [59487.0, 59499.5] },
+        { "term": "sf", "degree": 1, "time_range": [59525.5, 59538.5] },
+        { "term": "sf", "degree": 1, "time_range": [59539.5, 59551.0] }
+    ],  
+    "plot_lc": true,
+    "plot_fold": true
+}
