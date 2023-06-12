@@ -47,7 +47,7 @@ times, only those sectors that overlap a given clip will be affected.
 passed to ingest.py with the following:
 
 ```sh
-$ python3 ingest.py -f example/cw_eri.json
+$ python3 ingest.py -f examples/cw_eri.json
 ```
 where
 - `-f`/`--file`: is the file to load the pipeline parameters from.
@@ -105,7 +105,7 @@ additional json file settings is shown below.
 ```
 
 > The time values for clip or poly ranges will be interpreted as BTJD (<40,000), 
-> reduced JD (<2.4e6) or JD >= 2.4e6. 
+> reduced JD (<2.4e6) or JD (>= 2.4e6).
 
 ## Processing
 The pipeline will carry out the following tasks for the specified system:
@@ -127,3 +127,4 @@ The pipeline will carry out the following tasks for the specified system:
     - if `--plot-fold` both folded light-curves are plotted to a png
   - the filtered light-curve magnitude data is written to a JKTEBOP dat file
   - the estimated system parameters are used to write a JKTEBOP _task 3_ in file
+    - this includes the appropriate poly instructions for the data's time range
