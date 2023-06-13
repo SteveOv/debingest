@@ -9,9 +9,8 @@ import lightkurve as lk
 from lightkurve import LightCurveCollection
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
-import functions
 
-from library import plot
+from library import lightcurves, plot, jktebop
 
 # -------------------------------------------------------------------
 # Command line will contain a list of systems to ingest and options
@@ -98,7 +97,7 @@ else:
         args = argparse.Namespace(**{**file_args, **overrides})
 
 detrend_clip = 0.5
-model_phase_bins = 1024
+ml_phase_bins = 1024
 
 sys_name = args.sys_name if args.sys_name else args.target
 sys_file_label = "".join(c for c in sys_name if c not in r':*?"\/<>|').\
@@ -166,7 +165,7 @@ for lc in lcs:
 
     if args.clips and len(args.clips):
         for clip in args.clips:
-            filter_mask |= functions.clip_mask_from_time_range(lc, clip)
+            filter_mask |= lightcurves.clip_mask_from_time_range(lc, clip)
 
     lc = lc[~filter_mask]
     print(f"Additional filters mask {sum(filter_mask.unmasked)} "\
@@ -177,21 +176,21 @@ for lc in lcs:
     # Convert to relative mags with fitted polynomial detrending
     # ---------------------------------------------------------------------
     print(f"Detrending & 'zeroing' magnitudes by subtracting polynomial.")
-    functions.append_magnitude_columns(lc, "delta_mag", "delta_mag_err")
-    lc["delta_mag"] -= functions.fit_polynomial(lc.time, 
-                                                lc["delta_mag"], 
-                                                degree=2, 
-                                                res_sigma_clip=detrend_clip, 
-                                                reset_const_coeff=False)
+    lightcurves.append_magnitude_columns(lc, "delta_mag", "delta_mag_err")
+    lc["delta_mag"] -= lightcurves.fit_polynomial(lc.time, 
+                                                  lc["delta_mag"], 
+                                                  degree=2, 
+                                                  res_sigma_clip=detrend_clip, 
+                                                  reset_const_coeff=False)
 
 
     # ---------------------------------------------------------------------
     # Find the primary epoch and orbital period
     # ---------------------------------------------------------------------
-    (primary_epoch, primary_epoch_ix) = functions.find_primary_epoch(lc)
+    (primary_epoch, primary_epoch_ix) = lightcurves.find_primary_epoch(lc)
     print(f"The primary epoch for sector {sector} is at JD {primary_epoch.jd}")
     if args.period is None:
-        period = functions.find_period(lc, primary_epoch)
+        period = lightcurves.find_period(lc, primary_epoch)
         print(f"No period specified. Found {period} based on eclipse timings.")
     else:
         period = args.period * u.d
@@ -202,8 +201,8 @@ for lc in lcs:
     # Optionally plot the light-curve incl primary eclipse for diagnostics
     # ---------------------------------------------------------------------
     if args.plot_lc:
-        ax = plot.plot_light_curve_on_axes(lc, column="delta_mag",
-                                title=f"{sys_name} sector {sector} light-curve")
+        ax = plot.plot_light_curve_on_axes(
+            lc, title=f"{sys_name} sector {sector} light-curve")
         lc[[primary_epoch_ix]].scatter(column="delta_mag", ax=ax, zorder=-10,
                                        marker="x", s=64., linewidth=.5, 
                                        color="k", label="primary eclipse")
@@ -215,8 +214,8 @@ for lc in lcs:
     # Phase fold the LC & interpolate on the fold to use for our estimates
     # ---------------------------------------------------------------------
     print(f"Phase folding the LC to get a sample curve for param estimation.")
-    fold_lc = functions.phase_fold_lc(lc, primary_epoch, period, 0.75)
-    (phases, mags) = functions.get_reduced_folded_lc(fold_lc, model_phase_bins)
+    fold_lc = lightcurves.phase_fold_lc(lc, primary_epoch, period, 0.75)
+    (phases, mags) = lightcurves.get_reduced_folded_lc(fold_lc, ml_phase_bins)
 
 
     # ---------------------------------------------------------------------
@@ -280,14 +279,14 @@ for lc in lcs:
     append_text = []
     if args.polies:
         for poly in args.polies:
-            poly_from = functions.to_time(np.min(poly["time_range"]), lc)
-            poly_to = functions.to_time(np.max(poly["time_range"]), lc)
+            poly_from = lightcurves.to_time(np.min(poly["time_range"]), lc)
+            poly_to = lightcurves.to_time(np.max(poly["time_range"]), lc)
             if lc.time.min() < poly_from < lc.time.max() \
                     or lc.time.min() < poly_to < lc.time.max():
                 poly["time_range"] = (poly_from, poly_to)
-                append_text += ["\n" + functions.build_poly_instr(**poly)]
+                append_text += ["\n" + jktebop.build_poly_instr(**poly)]
 
-    functions.write_task3_in_file(staging_dir / (file_stem + ".in"), 
-                                  append_text, **params)
-    functions.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
+    jktebop.write_task3_in_file(staging_dir / (file_stem + ".in"), 
+                                append_text, **params)
+    jktebop.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
     print(f"JKTEBOP dat & in files were written to {staging_dir.resolve()}")

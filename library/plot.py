@@ -1,3 +1,6 @@
+"""
+Functions for plotting to matplotlib Axes.
+"""
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import astropy.units as u
