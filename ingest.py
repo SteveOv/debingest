@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 import functions
 
+from library import plot
+
 # -------------------------------------------------------------------
 # Command line will contain a list of systems to ingest and options
 # -------------------------------------------------------------------
@@ -200,19 +202,12 @@ for lc in lcs:
     # Optionally plot the light-curve incl primary eclipse for diagnostics
     # ---------------------------------------------------------------------
     if args.plot_lc:
-        fig = plt.figure(figsize=(8, 4), constrained_layout=True)
-        ax = fig.add_subplot(111)
-        lc[[primary_epoch_ix]].scatter(column="delta_mag", ax=ax, 
-                                       marker="x", s=64., linewidth=.5,
+        ax = plot.plot_light_curve_on_axes(lc, column="delta_mag",
+                                title=f"{sys_name} sector {sector} light-curve")
+        lc[[primary_epoch_ix]].scatter(column="delta_mag", ax=ax, zorder=-10,
+                                       marker="x", s=64., linewidth=.5, 
                                        color="k", label="primary eclipse")
-        lc.scatter(column="delta_mag", ax=ax, s=2., label=None)
-        ax.invert_yaxis()
-        ax.minorticks_on()
-        ax.tick_params(axis="both", which="both", direction="in",
-                       bottom=True, top=True, left=True, right=True)
         ax.get_legend().remove()
-        ax.set(title=f"{sys_name} sector {sector} light-curve",
-               ylabel="Relative magnitude [mag]")
         plt.savefig(staging_dir / (file_stem + "_lightcurve.png"), dpi=300)
 
 
@@ -228,16 +223,10 @@ for lc in lcs:
     # Optionally plot the folded LC overlaid with the interpolated one for diags
     # ---------------------------------------------------------------------
     if args.plot_fold:
-        fig = plt.figure(figsize=(8, 4), constrained_layout=True)
-        ax = fig.add_subplot(111)
-        fold_lc.scatter(column="delta_mag", ax=ax, s=4, alpha=0.25, label=None)
-        ax.scatter(phases, mags, c="k", marker="+", s=8, alpha=.5, linewidth=.5)
-        ax.invert_yaxis()
-        ax.minorticks_on()
-        ax.tick_params(axis="both", which="both", direction="in", 
-                       bottom=True, top=True, left=True, right=True)
-        ax.set(title=f"Folded light-curve of {sys_name} sector {sector}",
-               ylabel="Relative magnitude [mag]")
+        ax = plot.plot_folded_light_curve_on_axes(fold_lc, column = "delta_mag",
+                    title = f"Folded light-curve of {sys_name} sector {sector}")
+        ax.scatter(phases, mags, c="k", marker="+", 
+                   s=8, alpha=.5, linewidth=.5, zorder=10)
         plt.savefig(staging_dir / (file_stem + "_folded.png"), dpi=300)
 
 
