@@ -2,14 +2,20 @@
 
 ## Detached Eclipsing Binary Light-curve ingest pipeline
 
-This code base was developed in VSCode (on Ubuntu) within and an **Anaconda** 
-environment named **debingest** configured to run _Python 3.8_. The 
-configuration of the evironment is in `environment.yml`.
+This code base was developed in VSCode (on Ubuntu 22.04) within and an 
+**Anaconda** environment named **debingest**. This environment is configured 
+to support _Python 3.8_ and the libraries on which the code is dependent.
 
-Set up the environment, having first cloned the GitHub repo, by kicking off a 
-new Terminal and running the following (tested on Ubuntu 22.04);
+To set up the **debingest** environment, having first cloned the GitHub repo, 
+open a Terminal, navigate to this directory and run the following;
 ```sh
 $ conda env create -f environment.yml
+```
+
+Whenever you run the ingest pipeline, it will require this environment be
+active. You can activate it with the following command;
+```sh
+$ conda activate debingest
 ```
 
 ## Usage
@@ -17,8 +23,6 @@ The entry point for this pipeline is `ingest.py`.  This should be run in the
 context of the `debingest` environment, with example usage shown below;
 
 ```sh
-$ conda activate debingest
-
 $ python3 ingest.py -t 'CW Eri' -s 4 -s 31 -fl sap_flux -q hard -p 2.72837 -c 58420.0 58423.0 -pl -pf 
 ```
 where
@@ -44,8 +48,8 @@ times, only those sectors that overlap a given clip will be affected.
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
 > you remove the need to specify python3 whenever you run ingest.py.
 
-**Alternatively** the pipeline parameters can be set up in a json file and 
-passed to ingest.py with the following:
+**Alternatively** a target's pipeline parameters can be set up in a json file 
+and passed to ingest.py with the `-f` or `--file` argument, as follows:
 
 ```sh
 $ python3 ingest.py -f examples/cw_eri.json
@@ -53,8 +57,8 @@ $ python3 ingest.py -f examples/cw_eri.json
 where
 - `-f`/`--file`: is the file to load the pipeline parameters from.
 
-With the following being the contents of cw_eri.json equivalent to the above
-command line arguments (with the same default values and behaviour). 
+The following is the content of cw_eri.json equivalent to the above command 
+line arguments (with the same default values and behaviour). 
 
 ```json
 {
@@ -74,10 +78,10 @@ command line arguments (with the same default values and behaviour).
 }
 ```
 
-The file/json approach has the benefit that the parameters are persistent 
-making it less furstrating and safer to set up complex or large parameter sets
-than on the command line. There is the added benefit that the parameter file 
-can be stored in a source control or document repository alongside other assets.
+The use of the json file will allow more complex config to be written and opens 
+up the possibility of configs that would be very difficult/fiddly to express on 
+the command line. As it is persistent, it allows the target's pipeline config
+to be retained as an asset.
 
 There is explicit support for overriding parameter file values with the command
 line. The example below shows the quality bitmask in the file above being
