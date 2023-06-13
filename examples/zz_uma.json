@@ -10,17 +10,8 @@
     ],
     "period": 2.29926,
     "polies": [
-        { "term": "sf", "degree": 1, "time_range": [58683.0, 58696.5] },
-        { "term": "sf", "degree": 1, "time_range": [58697.0, 58709.0] },
-        { "term": "sf", "degree": 1, "time_range": [58870.0, 58884.2] },
-        { "term": "sf", "degree": 1, "time_range": [58884.8, 58899.0] },
-        { "term": "sf", "degree": 1, "time_range": [59419.5, 59433.0] },
-        { "term": "sf", "degree": 1, "time_range": [59433.5, 59447.0] },
-        { "term": "sf", "degree": 1, "time_range": [59580.0, 59593.5] },
-        { "term": "sf", "degree": 1, "time_range": [59576.0, 59602.5] },
-        { "term": "sf", "degree": 1, "time_range": [59610.0, 59622.0] },
-        { "term": "sf", "degree": 1, "time_range": [59625.5, 59637.0] }
-    ],  
+        { "term": "sf", "degree": 1, "gap_threshold": 0.5 }
+    ],
     "plot_lc": true,
     "plot_fold": true
 }

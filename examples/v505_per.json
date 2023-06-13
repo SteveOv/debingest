@@ -9,11 +9,8 @@
     ],
     "period": 4.2220,
     "polies": [
-        { "term": "sf", "degree": 1, "time_range": [58790.0, 58802.0] },
-        { "term": "sf", "degree": 1, "time_range": [58803.0, 58815.0] },
-        { "term": "sf", "degree": 1, "time_range": [59882.0, 59896.1] },
-        { "term": "sf", "degree": 1, "time_range": [59896.2, 59910.5] }
-    ],  
+        { "term": "sf", "degree": 1, "gap_threshold": 0.5 }
+    ],
     "plot_lc": true,
     "plot_fold": true
 }

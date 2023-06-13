@@ -74,8 +74,8 @@ ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
                 help="Write a plot of each sector folded data to a png file")
 ap.set_defaults(target=None, file=None, 
                 sectors=[], mission="TESS", author="SPOC", exptime=None,
-                flux_column="sap_flux", quality_bitmask="default", 
-                period=None, clips=[], plot_lc=False, plot_fold=False,
+                flux_column="sap_flux", quality_bitmask="default", period=None, 
+                clips=[], polies=[], plot_lc=False, plot_fold=False,
                 sys_name=None)
 args = ap.parse_args()
 
@@ -276,17 +276,8 @@ for lc in lcs:
         "primary_epoch": primary_epoch.jd - 2.4e6,
     }
 
-    append_text = []
-    if args.polies:
-        for poly in args.polies:
-            poly_from = lightcurves.to_time(np.min(poly["time_range"]), lc)
-            poly_to = lightcurves.to_time(np.max(poly["time_range"]), lc)
-            if lc.time.min() < poly_from < lc.time.max() \
-                    or lc.time.min() < poly_to < lc.time.max():
-                poly["time_range"] = (poly_from, poly_to)
-                append_text += ["\n" + jktebop.build_poly_instr(**poly)]
-
+    appends = jktebop.build_polies_for_lc(lc, args.polies)
     jktebop.write_task3_in_file(staging_dir / (file_stem + ".in"), 
-                                append_text, **params)
+                                appends, **params)
     jktebop.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
     print(f"JKTEBOP dat & in files were written to {staging_dir.resolve()}")

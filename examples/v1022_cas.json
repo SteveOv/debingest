@@ -12,13 +12,8 @@
     ],
     "period": 12.1561598,
     "polies": [
-        { "term": "sf", "degree": 1, "time_range": [58764.0, 58773.0] },
-        { "term": "sf", "degree": 1, "time_range": [58777.0, 58788.0] },
-        { "term": "sf", "degree": 1, "time_range": [58955.0, 58968.5] },
-        { "term": "sf", "degree": 1, "time_range": [58969.0, 58982.5] },
-        { "term": "sf", "degree": 1, "time_range": [59853.0, 59864.0] },
-        { "term": "sf", "degree": 1, "time_range": [59867.0, 59882.5] }
-    ],  
+        { "term": "sf", "degree": 1, "gap_threshold": 0.5 }
+    ],
     "plot_lc": true,
     "plot_fold": true
 }

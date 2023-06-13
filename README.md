@@ -98,15 +98,37 @@ additional json file settings is shown below.
   "polies": [
     { "term": "sf", "degree": 1, "time_range": [58410.00, 58420.00] },
     { "term": "sf", "degree": 1, "time_range": [58424.00, 58437.00] },
-    { "term": "sf", "degree": 1, "time_range": [59144.00, 59157.70] },
-    { "term": "sf", "degree": 1, "time_range": [59158.00, 59170.50] }
+    { "term": "sf", "degree": 1, "gap_threshold": 0.5 }
   ]
 
 }
 ```
 
-> The time values for clip or poly ranges will be interpreted as BTJD (<40,000), 
-> reduced JD (<2.4e6) or JD (>= 2.4e6).
+There are now two types of poly config:
+- a _manual poly_ will have a `time_range` parameter
+  - the range over which the poly is applied is specified in the `time_range`
+  - will only be applied to a light-curve where the time ranges overlap
+  - will generate a single poly instruction
+- an _auto-poly_ will have a `gap_threshold` parameter 
+  - can apply to any light-curve
+  - ranges are derived by splitting a light-curve on time gaps > threshold
+  - will generate one or more poly instructions
+- the `term` and `degree` parameter are common to both
+
+Polies are processed in order, with the supported config being zero or more 
+_manual polies_ listed before a final, optional _auto-poly_ (as 
+shown). For each of the target's light-curves, the manual polies will be tested
+and applied where they overlap with the light-curve on the time axis. The 
+_auto-poly_ will be triggered where no _manual polies_ were applied. This set 
+up allows for selective overriding of a default _auto-poly_ with _manual polies_
+applied to those light-curves where the "gap_threshold" of the default 
+_auto-poly_ is problematic.
+
+The different types of poly are exclusive per light-curve, once one has 
+been triggered subsequent polies of a different type will be ignored.
+
+> The time values for clip or poly date ranges will be interpreted as 
+> BTJD (<40,000), reduced JD (<2.4e6) or JD (>= 2.4e6).
 
 ## Processing
 The pipeline will carry out the following tasks for the specified system:

@@ -5,10 +5,11 @@ from typing import List, Union, Callable, Tuple
 from pathlib import Path
 from string import Template
 import numpy as np
-from astropy.time import Time
+import astropy.units as u
+from astropy.time import Time, TimeDelta
 from astropy.io import ascii
 from lightkurve import LightCurve
-
+from library import lightcurves
 
 def write_data_to_dat_file(lc: LightCurve, 
                            file_name: Path,
@@ -95,6 +96,88 @@ def write_task3_in_file(file_name: Path, append_lines: List[str]=[], **params):
             of.writelines(append_lines)
         print(f"Writing JKTEBOP task3 in file to '{file_name.name}'")
     return
+
+
+def build_polies_for_lc(lc: LightCurve, polies: List[dict] = None) -> List[str]:
+    """
+    Will build poly instruction lines for the passed light-curve based
+    on the configuration in passed array of poly configuration items. There are
+    two types of poly config differentiated by whether they have a "date_range"
+    or "gap_threshold" parameter.
+
+    The expectation is that zero or more "date_range" polies will be listed 
+    first. These will be triggered if their date range overlaps with that of 
+    the passed light-curve. 
+    
+    The last poly specified may be an optional "gap_threshold" poly to act as 
+    a fall-back if no "date_range" polies are found or have been applied. 
+    A "gap_threshold" poly will calculate suitable date ranges by splitting 
+    the timeseries data on gaps > threshold and build a poly instruction for 
+    each.  A single poly instruction covering the whole lightcurve will be 
+    built if no gaps found.
+
+    Once a "date_range" poly has been triggered subsequent "gap_threshold" 
+    poly instructions are ignored and vice-versa.
+
+    The defaults for a poly term, degree and gap_threshold are "sf", 1 & 0.5 (d) 
+
+    !lc! the source light-curve
+
+    !polies! an array of poly configurations to be evaluated in order
+    """
+    lines = []
+
+    if polies and isinstance(polies, list):
+        flags = {}  # Control application of mutually exclusive config per term
+        MANUAL_POLY = 1
+        AUTO_POLY = 2
+        lc_start = lc.time.min()
+        lc_end = lc.time.max()
+
+        for ix, poly in enumerate(polies):
+            term = poly.get("term") or "sf"
+            deg = poly.get("degree") or 1
+
+            # The two types of config are distinguished by the presence/absence
+            # of a time_range. Either we have an excplicit time_range given...
+            if "time_range" in poly:
+                if flags.get(term) != AUTO_POLY: 
+                    rng = lightcurves.to_time([
+                        np.min(poly["time_range"]), 
+                        np.max(poly["time_range"])
+                    ], lc)
+
+                    if lc_start < rng[0] < lc_end or lc_start < rng[1] < lc_end:
+                        lines += ["\n" + build_poly_instr(rng, term, deg)]
+                        flags[term] = MANUAL_POLY
+                        print(f"Manual poly for {term} (degree={deg}) "\
+                              + f"over JD {rng[0].jd:.2f} to {rng[1].jd:.2f}.")
+                else:
+                    print(f"Skipping poly[{ix}]: auto poly already applied")
+
+            else:
+                if not flags.get(term):
+                    # ... or we use a gap threshold, where the lc will be split
+                    # into time ranges separated by gaps > the threshold.
+                    thold = TimeDelta((poly.get("gap_threshold") or 0.5) * u.d)
+                    rng_ixs = lightcurves.find_indices_of_segments(lc, thold)
+
+                    for (start_ix, end_ix) in rng_ixs:
+                        rng = Time([
+                            lc.time[start_ix] - .02 * u.d, # covers rounding err
+                            lc.time[end_ix] + .02 * u.d
+                        ])
+
+                        lines += ["\n" + build_poly_instr(rng, term, deg)]
+                        flags[term] = AUTO_POLY
+                        print(f"Auto poly for '{term}' (degree={deg}) "\
+                              + f"over JD {rng[0].jd:.2f} to {rng[1].jd:.2f} "\
+                              + f"splitting on gaps > {thold} d.")
+                elif flags.get(term) == AUTO_POLY:
+                    print(f"Skipping auto poly - an auto poly already applied")
+                else:
+                    print(f"Skipping auto poly - manual poly already applied")
+    return lines
 
 
 def build_poly_instr(time_range: Tuple[Time, Time],

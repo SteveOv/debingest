@@ -5,7 +5,7 @@ from typing import Union, Tuple, List
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.interpolate.interpolate import interp1d
-from astropy.time import Time
+from astropy.time import Time, TimeDelta
 import astropy.units as u
 
 from lightkurve.lightcurve import LightCurve, FoldedLightCurve
@@ -30,11 +30,15 @@ def clip_mask_from_time_range(lc: LightCurve,
     return mask
 
 
-def to_time(value: Union[int, float, np.double, Time], lc: LightCurve) -> Time:
+def to_time(value: Union[Time, np.double, Tuple[np.double], List[np.double,]], 
+            lc: LightCurve) \
+                -> Time:
     """
     Converts the passed numeric value to an astropy Time.
     The magnitude of the time will be used to interpret the format to match LC.
     """
+    if isinstance(value, list) or isinstance(value, tuple):
+        return Time([to_time(v, lc) for v in value])
     if isinstance(value, Time):
         return value
     elif value < 4e4 and lc.time.format == "btjd":
@@ -273,3 +277,36 @@ def get_reduced_folded_lc(flc: FoldedLightCurve,
     reduced_phases = np.linspace(min_phase, min_phase + 1., num_bins + 1)[:-1]
     reduced_mags = interp(reduced_phases)
     return (reduced_phases, reduced_mags)
+
+
+def find_indices_of_segments(lc: LightCurve, 
+                             threshold: TimeDelta) \
+                                -> List[Tuple[Time, Time]]:
+    """
+    Finds the indices of contiguous segments in the passed LightCurve. These are
+    subsets of the LC where the gaps between bins does not exceed the passed
+    threshold. Gaps > threshold are treated as boundaries between segments.
+
+    !lc! the source LightCurve to parse for gaps/segments.
+
+    !threshold! the threshold gap time beyond which a break is noted
+
+    Returns a list of (first, last) indices. If no gaps found this will have a
+    single entry for the (first, last) indices in the LightCurve.
+    """
+    if not isinstance(threshold, TimeDelta):
+        threshold = TimeDelta(threshold)
+
+    # Find any gaps in the times greater than the threshold length. The result
+    # of np.diff() will be one shorter than lc.time so the indices where the
+    # threshold exceeded are equivalent to the last index in each segment.
+    last_ixs = np.where(np.diff(lc.time.value) > threshold.to(u.d).value)[0]
+
+    # Build up the  segments' (first, last) indices topped and tailed
+    # with the first and last indices in the timeseries data.
+    zipped_segment_ixs = zip(
+        np.concatenate([np.array([0]), last_ixs + 1]),          # first indices
+        np.concatenate([last_ixs, np.array([len(lc.time)-1])])  # last indices
+    )
+
+    return [ixs for ixs in zipped_segment_ixs]
