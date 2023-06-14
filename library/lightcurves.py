@@ -1,7 +1,7 @@
 """
 Functions for interacting with LightCurve data
 """
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Generator
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.interpolate.interpolate import interp1d
@@ -281,7 +281,7 @@ def get_reduced_folded_lc(flc: FoldedLightCurve,
 
 def find_indices_of_segments(lc: LightCurve, 
                              threshold: TimeDelta) \
-                                -> List[Tuple[Time, Time]]:
+                                -> Generator[Tuple[int, int], any, None]:
     """
     Finds the indices of contiguous segments in the passed LightCurve. These are
     subsets of the LC where the gaps between bins does not exceed the passed
@@ -289,24 +289,21 @@ def find_indices_of_segments(lc: LightCurve,
 
     !lc! the source LightCurve to parse for gaps/segments.
 
-    !threshold! the threshold gap time beyond which a break is noted
+    !threshold! the threshold gap time beyond which a segment break is triggered
 
-    Returns a list of (first, last) indices. If no gaps found this will have a
-    single entry for the (first, last) indices in the LightCurve.
+    Returns an generator of segment (start, end) indices. If no gaps found this 
+    will yield a single entry for the (first, last) indices in the LightCurve.
     """
     if not isinstance(threshold, TimeDelta):
-        threshold = TimeDelta(threshold)
+        threshold = TimeDelta(threshold * u.d)
+    
+    # Much quicker if we use primatives - make sure we work in days
+    threshold = threshold.to(u.d).value
+    times = lc.time.value
 
-    # Find any gaps in the times greater than the threshold length. The result
-    # of np.diff() will be one shorter than lc.time so the indices where the
-    # threshold exceeded are equivalent to the last index in each segment.
-    last_ixs = np.where(np.diff(lc.time.value) > threshold.to(u.d).value)[0]
-
-    # Build up the  segments' (first, last) indices topped and tailed
-    # with the first and last indices in the timeseries data.
-    zipped_segment_ixs = zip(
-        np.concatenate([np.array([0]), last_ixs + 1]),          # first indices
-        np.concatenate([last_ixs, np.array([len(lc.time)-1])])  # last indices
-    )
-
-    return [ixs for ixs in zipped_segment_ixs]
+    last_ix = len(lc) - 1
+    segment_start_ix = 0
+    for this_ix, previous_time in enumerate(times, start = 1):
+        if this_ix > last_ix or times[this_ix] - previous_time > threshold:
+            yield (segment_start_ix, this_ix - 1)
+            segment_start_ix = this_ix
