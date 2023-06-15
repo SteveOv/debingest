@@ -18,7 +18,7 @@ active. You can activate it with the following command;
 $ conda activate debingest
 ```
 
-## Usage
+## Command line Use
 The entry point for this pipeline is `ingest.py`.  This should be run in the
 context of the `debingest` environment, with example usage shown below;
 
@@ -48,6 +48,7 @@ times, only those sectors that overlap a given clip will be affected.
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
 > you remove the need to specify python3 whenever you run ingest.py.
 
+## Ingest JSON file use
 **Alternatively** a target's pipeline parameters can be set up in a json file 
 and passed to ingest.py with the `-f` or `--file` argument, as follows:
 
@@ -78,22 +79,20 @@ line arguments (with the same default values and behaviour).
 }
 ```
 
-The use of the json file will allow more complex config to be written and opens 
-up the possibility of configs that would be very difficult/fiddly to express on 
-the command line. As it is persistent, it allows the target's pipeline config
-to be retained as an asset.
+The use of a target ingest json file will allow more complex config to be 
+expressed and for it to be persisted and stored as an asset.
 
-There is explicit support for overriding parameter file values with the command
-line. The example below shows the quality bitmask in the file above being
-overriden with the value hardest.
+There is support for overriding parameter file values with the previosly 
+discussed command line arguments. The example below shows the quality bitmask 
+in the cw_eri.json file being overriden with the value hardest.
 
 ```sh
 $ python3 ingest.py -f examples/cw_eri.json -q hardest
 ```
 
-The json file adds support for configuration that would be difficult with the
-command line arguments. The initial use was to set up poly fitting instructions
-in the JKTEBOP in files produced, an example of which is shown below.
+The json file adds support for configuration that would be difficult to express
+with command line arguments. The initial use was for configuring poly fitting 
+instructions within the JKTEBOP .in files produced. An example is shown below:
 
 ```json
 {
@@ -125,19 +124,19 @@ and applied where they overlap with the light-curve on the time axis. The
 _auto-poly_ will be triggered where no _manual polies_ were applied. This set 
 up allows for selective overriding of a default _auto-poly_ with _manual polies_
 applied to those light-curves where the "gap_threshold" of the default 
-_auto-poly_ is problematic.
-
-The different types of poly are exclusive per light-curve, once one has 
-been triggered subsequent polies of a different type will be ignored.
+_auto-poly_ is problematic. The different types of poly are exclusive per 
+light-curve, once one has been triggered subsequent polies of a different 
+type will be ignored.
 
 > The time values for clip or poly date ranges will be interpreted as 
 > BTJD (<40,000), reduced JD (<2.4e6) or JD (>= 2.4e6).
 
 The json file also allows you to explicitly set the fitting parameters in the
-JKTEBOP .in files written.  Do this by adding a "fitting_params" dictionary to
-the json file, where the keys match the template tokens to be set. The example 
-below sets the photometric mass ratio, 3rd light and limb darkening parameters
-with any other token/parameters being given the values estimated during ingest:
+JKTEBOP .in files written. You do this by populating a "fitting_params" 
+dictionary in the json file with keys matching the template tokens to be set. 
+The example below sets the photometric mass ratio, 3rd light and limb darkening 
+values with any other token/parameters retaining the values estimated during 
+ingest:
 
 ```json
 {
@@ -160,6 +159,10 @@ with any other token/parameters being given the values estimated during ingest:
 }
 ```
 
+The ./examples/cw_eri.json file is a good example of the range of configuration
+possible using a json file.  Also see the ./library/task3.in.template file to
+see what tokens are set during ingest.
+
 ## Processing
 The pipeline will carry out the following tasks for the specified system:
 - the MAST portal is queried on the target/sectors for TESS/SPOC light-curves
@@ -180,4 +183,5 @@ The pipeline will carry out the following tasks for the specified system:
     - if `--plot-fold` both folded light-curves are plotted to a png
   - the filtered light-curve magnitude data is written to a JKTEBOP dat file
   - the estimated system parameters are used to write a JKTEBOP _task 3_ in file
+    - any overrides from the fitting_params are applied
     - this includes the appropriate poly instructions for the data's time range
