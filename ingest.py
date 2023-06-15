@@ -206,10 +206,9 @@ for lc in lcs:
     if args.plot_lc:
         ax = plot.plot_light_curve_on_axes(
             lc, title=f"{sys_name} sector {sector} light-curve")
-        lc[[primary_epoch_ix]].scatter(column="delta_mag", ax=ax, zorder=-10,
-                                       marker="x", s=64., linewidth=.5, 
-                                       color="k", label="primary eclipse")
-        ax.get_legend().remove()
+        primary_mag = lc["delta_mag"][primary_epoch_ix]
+        ax.scatter([primary_epoch.value], [primary_mag.value], zorder=-10,
+                   marker="x", s=64., lw=.5, c="k", label="primary eclipse")
         plt.savefig(staging_dir / (file_stem + "_lightcurve.png"), dpi=300)
 
 
