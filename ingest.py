@@ -266,6 +266,7 @@ for lc in lcs:
         "ecosw": ecosw,
         "J": J,
         "L3": 0.,
+        "L3_fit": 1,
         "LD_A": "quad",
         "LD_B": "quad",
         "LD_A1": 0.25,
