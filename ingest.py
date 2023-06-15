@@ -76,8 +76,8 @@ ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
 ap.set_defaults(target=None, file=None, 
                 sectors=[], mission="TESS", author="SPOC", exptime=None,
                 flux_column="sap_flux", quality_bitmask="default", period=None, 
-                clips=[], polies=[], plot_lc=False, plot_fold=False,
-                sys_name=None)
+                clips=[], polies=[], fitting_params={}, 
+                plot_lc=False, plot_fold=False, sys_name=None)
 args = ap.parse_args()
 
 
@@ -256,6 +256,7 @@ for lc in lcs:
     # ---------------------------------------------------------------------
     # Generate JKTEBOP .dat and .in file for task3.
     # ---------------------------------------------------------------------
+    overrides = args.fitting_params if args.fitting_params else {}
     params = {
         "rA_plus_rB": rA_plus_rB,
         "k": k,
@@ -265,17 +266,22 @@ for lc in lcs:
         "ecosw": ecosw,
         "J": J,
         "L3": 0.,
-        # TODO: Do we train LD params?
-        "LD_A": "pow2",
-        "LD_B": "pow2",
-        "LD_A1": 0.65,
-        "LD_B1": 0.65,
-        "LD_A2": 0.47,
-        "LD_B2": 0.47,
+        "LD_A": "quad",
+        "LD_B": "quad",
+        "LD_A1": 0.25,
+        "LD_B1": 0.25,
+        "LD_A1_fit": 1,
+        "LD_B1_fit": 1,
+        "LD_A2": 0.22,
+        "LD_B2": 0.22,
+        "LD_A2_fit": 0,
+        "LD_B2_fit": 0,
         "reflA": 0.,
         "reflB": 0.,
         "period": period.to(u.d).value,
         "primary_epoch": primary_epoch.jd - 2.4e6,
+
+        **overrides
     }
 
     appends = jktebop.build_polies_for_lc(lc, args.polies)

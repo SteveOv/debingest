@@ -91,10 +91,9 @@ overriden with the value hardest.
 $ python3 ingest.py -f examples/cw_eri.json -q hardest
 ```
 
-The json file adds support for configuration that would be difficult with 
-the command line arguments. Currently this is limited to setting up poly
-fitting instructions in the JKTEBOP in files produced.  An example of the
-additional json file settings is shown below.
+The json file adds support for configuration that would be difficult with the
+command line arguments. The initial use was to set up poly fitting instructions
+in the JKTEBOP in files produced, an example of which is shown below.
 
 ```json
 {
@@ -133,6 +132,33 @@ been triggered subsequent polies of a different type will be ignored.
 
 > The time values for clip or poly date ranges will be interpreted as 
 > BTJD (<40,000), reduced JD (<2.4e6) or JD (>= 2.4e6).
+
+The json file also allows you to explicitly set the fitting parameters in the
+JKTEBOP .in files written.  Do this by adding a "fitting_params" dictionary to
+the json file, where the keys match the template tokens to be set. The example 
+below sets the photometric mass ratio, 3rd light and limb darkening parameters
+with any other token/parameters being given the values estimated during ingest:
+
+```json
+{
+
+  "fitting_params": {
+    "qphot": 0.836,
+    "L3": 0.080,
+    "LD_A": "pow2",
+    "LD_B": "pow2",
+    "LD_A1": 0.6437,
+    "LD_B1": 0.6445,       
+    "LD_A1_fit": 1,
+    "LD_B1_fit": 1,
+    "LD_A2": 0.4676,
+    "LD_B2": 0.4967,
+    "LD_A2_fit": 0,
+    "LD_B2_fit": 0
+  },
+
+}
+```
 
 ## Processing
 The pipeline will carry out the following tasks for the specified system:
