@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import os
 import argparse
 import textwrap
 import json
@@ -132,6 +133,8 @@ if results:
 print(f"\nFound {len(lcs)} light-curves for {sys_name} sectors {lcs.sector}.")
 if len(lcs):
     # TODO: Arrange a proper location from which to pick up the model.
+    # Suppress annoying TF info messages
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
     model = load_model("./cnn_model.h5")
 
 
