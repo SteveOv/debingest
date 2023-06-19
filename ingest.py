@@ -16,20 +16,7 @@ from library import lightcurves, plot, jktebop, utility
 # -------------------------------------------------------------------
 # Command line will contain a list of systems to ingest and options
 # -------------------------------------------------------------------
-description = "An ingest pipeline for TESS dEB light-curves. \
-It searches for available light-curves for the requested identifier \
-via the MAST portal and appropriate fits files are downloaded. \
-For each fits file, the flux data is converted to relative magnitudes, \
-a detrending polynomial is subtracted and some quality filters applied. \
-Subsequently, the primary epoch and orbital period are calculated \
-and a phase folded light-curve is passed to a Machine-learning model for \
-system parameter estimation. \
-Finally, the light-curve is prepared for fitting by JKTEBOP with the \
-relative magnitudes being written to a text dat file and the primary \
-epoch, period and estimated parameters used to create the in file which \
-contains the JKTEBOP processing parameters and instructions."
-
-ap = argparse.ArgumentParser(description=description)
+ap = argparse.ArgumentParser(description=utility.help_description)
 
 # Must have 1 of these two. User must specify the target (& all other args) at
 # the command line or specify a json file (& the args are read from file with
