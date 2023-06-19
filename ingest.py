@@ -58,20 +58,21 @@ ap.add_argument("-fl", "--flux", type=str,
                 dest="flux_column", default="sap_flux",
                 help="The flux column to use: sap_flux or pdcsap_flux. \
                     The default is sap_flux.")
+ap.add_argument("-e", "--exptime", type=str, dest="exptime",
+                help="Exposure time/cadence: set to long, short, fast or an \
+                    exact time in seconds. If omitted Will retrieve all.")
 ap.add_argument("-q", "--quality", type=str, dest="quality_bitmask",
                 help="Quality bitmask to filter out low quality data (may be a \
                     numerical bitmask or text: none, default, hard, hardest). \
                     The default value is default.")
-ap.add_argument("-e", "--exptime", type=str, dest="exptime",
-                help="Exposure time/cadence: set to long, short, fast or an \
-                    exact time in seconds. If omitted Will retrieve all.")
+ap.add_argument("-qc", "--quality-clip", type=np.double, 
+                nargs=2, dest="quality_clips", action="append",
+                help="A time range (from, to) to clip away problematic data \
+                    from light-curves prior to processing. Multiple clip \
+                    arguments are supported.")
 ap.add_argument("-p", "--period", type=np.double, dest="period",
                 help="The period, in days, of the system. If not specified the \
                     period will be calculated on light-curve eclipse spacing.")
-ap.add_argument("-c", "--clip", type=np.double, 
-                nargs=2, dest="clips", action="append",
-                help="A clip time range (from, to) to remove from light-curves\
-                    prior to processing. Multiple clip arguments supported.")
 ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
                 action="store_true", required=False,
                 help="Write a plot of each sector's light-curve to a png file")
@@ -81,7 +82,7 @@ ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
 ap.set_defaults(target=None, file=None, new_file=None, sys_name=None,
                 sectors=[], mission="TESS", author="SPOC", exptime=None,
                 flux_column="sap_flux", quality_bitmask="default", period=None, 
-                clips=[], polies=[], fitting_params={}, 
+                quality_clips=[], polies=[], fitting_params={}, 
                 plot_lc=False, plot_fold=False)
 args = ap.parse_args()
 
@@ -171,13 +172,15 @@ for lc in lcs:
     # ---------------------------------------------------------------------
     # We'll still need to filter out NaN & negative fluxes as they may still be 
     # present (only hardest seems to exclude them) and they'll break detrending.
+    # Similarly, filter user defined ranges of suspect quality/abberations.
     filter_mask = np.isnan(lc.flux)
     filter_mask |= lc.flux < 0
     print(f"NaN/negative flux clip masks {sum(filter_mask.unmasked)} row(s).")
 
-    if args.clips and len(args.clips):
-        for clip in args.clips:
-            filter_mask |= lightcurves.clip_mask_from_time_range(lc, clip)
+    if args.quality_clips and len(args.quality_clips):
+        print(f"Applying quality clip masks")
+        for clip in args.quality_clips:
+            filter_mask |= lightcurves.mask_from_time_range(lc, clip)
 
     lc = lc[~filter_mask]
     print(f"Additional filters mask {sum(filter_mask.unmasked)} "\

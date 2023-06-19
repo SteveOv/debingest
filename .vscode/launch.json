@@ -27,7 +27,7 @@
                 "--quality", "hardest", 
                 "--plot-lc", 
                 "--plot-fold", 
-                "--clip", "58420.00", "58423.00"
+                "--quality-clip", "58420.00", "58423.00"
             ]
         },
         {
@@ -60,7 +60,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "-n", "./examples/a_sys.json", "-sys", "A Sys", "-s", "20", "-e", "short", "-q", "hardest", "-p", "2.8008", "-c", "51000", "51010", "-pf", "-pl"
+                "-n", "./examples/a_sys.json", "-sys", "A Sys", "-s", "20", "-e", "short", "-q", "hardest", "-qc", "51000", "51010", "-p", "2.8008", "-pf", "-pl"
             ]
         },
         {

@@ -11,9 +11,9 @@ import astropy.units as u
 from lightkurve.lightcurve import LightCurve, FoldedLightCurve
 
 
-def clip_mask_from_time_range(lc: LightCurve,
-                              time_range: Tuple[np.double, np.double]) \
-                                -> np.ndarray:
+def mask_from_time_range(lc: LightCurve,
+                         time_range: Tuple[np.double, np.double]) \
+                            -> np.ndarray:
     """
     Returns a mask over the passed LightCurve for the indicated time range.
 
@@ -25,8 +25,8 @@ def clip_mask_from_time_range(lc: LightCurve,
     time_to = to_time(np.max(time_range), lc)
 
     mask = ((lc.time >= time_from) & (lc.time <= time_to))
-    print(f"Clip range over [{time_from.format} {time_from}, "\
-          f"{time_to.format} {time_to}] masks {sum(mask)} row(s).")
+    print(f"Range over [{time_from.format} {time_from}, "\
+          f"{time_to.format} {time_to}] selects {sum(mask)} row(s).")
     return mask
 
 

@@ -5,7 +5,7 @@
     "flux_column": "sap_flux",
     "exptime": "short",
     "quality_bitmask": "hardest",
-    "clips": [
+    "quality_clips": [
         [58710.00, 58711.00]
     ],
     "period": 2.29926,

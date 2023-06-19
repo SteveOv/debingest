@@ -6,7 +6,7 @@
     ],
     "flux_column": "sap_flux",
     "quality_bitmask": "hardest",
-    "clips": [
+    "quality_clips": [
         [58420.00, 58423.00]
     ],
     "period": 2.72837093,

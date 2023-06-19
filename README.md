@@ -31,9 +31,11 @@ where
 - `-s`/`--sector`: an optional sector to find - finds all if omitted
 - `-fl`/`--flux`: the flux data column to use: **sap_flux** or pdcsap_flux
 - `-e`/`--exptime`: optionally filter on exposure time: long, short or fast
-- `-q`/`--quality`: the quality filter set: none, **default**, hard or hardest
-- `-p`/`--period`: the optional orbital period to use - calculated if omitted
-- `-c`/`--clip`: optional time range to clip from any LCs - must have 2 values
+- `-q`/`--quality`: the quality filter set: none, **default**, hard or hardes
+- `-qc`/`--quality-clip`: optional time range to clip from any LCs
+  - must have two values - a start and end time (i.e.: -qc 51000.0 52020.0)
+  - clips are applied after download and before detrending & conversion to mags
+- `-p`/`--period`: the optional orbital period to use - calculated if omittedes
 - `-pl`/`--plot-lc`: instructs the pipeline to plot each lightcurve to a png
 - `-pf`/`--plot-fold`: instructs the pipeline to plot each folded LC to a png
 
@@ -45,10 +47,10 @@ The `-s` or `--sector` argument may be given multiple times, once for each
 sector required.  If there are no `-s` arguments then all available sectors
 are found for processing. 
 
-The `-c` or `--clip` argument may be specified multiple times if you require 
-clipping of multiple time ranges or sectors. You cannot specify which sectors 
-a clip applies to but, as the sectors will have been observed at different 
-times, only those sectors that overlap a given clip will be affected.
+The `-qc` or `--quality-clip` argument may be specified multiple times if you 
+require clipping of multiple time ranges or sectors. You cannot specify which 
+sectors a clip applies to but, as the sectors will have been observed at 
+different times, only those sectors that overlap a given clip will be affected.
 
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
 > you remove the need to specify python3 whenever you run ingest.py.
