@@ -40,6 +40,39 @@
             "args": [
                 "--file", "./examples/cw_eri.json"
             ]
+        },
+        {
+            "name": "Python: ingest.py -n ./examples/a_sys.json [defaults]",
+            "type": "python",
+            "request": "launch",
+            "program": "ingest.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--new-file", "./examples/a_sys.json"
+            ]
+        },
+        {
+            "name": "Python: ingest.py -n ./examples/a_sys.json [overrides]",
+            "type": "python",
+            "request": "launch",
+            "program": "ingest.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "-n", "./examples/a_sys.json", "-sys", "A Sys", "-s", "20", "-e", "short", "-q", "hardest", "-p", "2.8008", "-c", "51000", "51010", "-pf", "-pl"
+            ]
+        },
+        {
+            "name": "Python: ingest.py -f ./examples/a_sys.json [use new-file]",
+            "type": "python",
+            "request": "launch",
+            "program": "ingest.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "-f", "./examples/a_sys.json"
+            ]
         }
     ]
 }

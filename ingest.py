@@ -11,7 +11,7 @@ from lightkurve import LightCurveCollection
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 
-from library import lightcurves, plot, jktebop
+from library import lightcurves, plot, jktebop, utility
 
 # -------------------------------------------------------------------
 # Command line will contain a list of systems to ingest and options
@@ -38,9 +38,14 @@ group = ap.add_mutually_exclusive_group(required=True)
 group.add_argument("-t", "--target", type=str, dest="target",
                 help="Search identifier for the system to ingest.")
 group.add_argument("-f", "--file", type=Path, dest="file",
-                help="Search identifier for the system to ingest.")
+                help="JSON file containing ingest configuration for a target.")
+group.add_argument("-n", "--new-file", type=str, dest="new_file",
+                help="Name of new JSON config file to generate")
 
 # These are not part of the group above
+ap.add_argument("-sys", "--sys-name", type=str, 
+                dest="sys_name", default=None,
+                help="The system name if different to target.")
 ap.add_argument("-s", "--sector", type=int, 
                 dest="sectors", action="append", 
                 help="A sector to search for, or omit to search on all sectors.\
@@ -73,20 +78,22 @@ ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
 ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
                 action="store_true", required=False,
                 help="Write a plot of each sector folded data to a png file")
-ap.set_defaults(target=None, file=None, 
+ap.set_defaults(target=None, file=None, new_file=None, sys_name=None,
                 sectors=[], mission="TESS", author="SPOC", exptime=None,
                 flux_column="sap_flux", quality_bitmask="default", period=None, 
                 clips=[], polies=[], fitting_params={}, 
-                plot_lc=False, plot_fold=False, sys_name=None)
+                plot_lc=False, plot_fold=False)
 args = ap.parse_args()
 
 
 # ---------------------------------------------------------------------
 # Handle setting up the pipeline processing configuration
 # ---------------------------------------------------------------------
-if args.target is not None:
-    print(f"Configuring pipeline based on command line arguments")
-else:
+if args.new_file is not None:
+    new_file = Path(args.new_file)
+    utility.save_new_ingest_json(new_file, args)
+    quit()
+elif args.file:
     print(f"Configuring pipeline from {args.file} & any command line overrides")
     # Read the JSON file and use it as the basis of our pipeline arguments but
     # with overrides from the command line arguments to apply missing default
@@ -96,6 +103,8 @@ else:
         overrides = {k: v for k, v in vars(args).items() 
                      if k not in file_args or ap.get_default(k) != v}
         args = argparse.Namespace(**{**file_args, **overrides})
+else:
+    print(f"Configuring pipeline based on command line arguments")
 
 detrend_clip = 0.5
 ml_phase_bins = 1024

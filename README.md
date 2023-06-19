@@ -27,6 +27,7 @@ $ python3 ingest.py -t 'CW Eri' -s 4 -s 31 -fl sap_flux -q hard -p 2.72837 -c 58
 ```
 where
 - `-t`/`--target`: required MAST identifier for the target system to process
+- `-sys`/`--sys-name`: optional name of the system (useful if target is an Id)
 - `-s`/`--sector`: an optional sector to find - finds all if omitted
 - `-fl`/`--flux`: the flux data column to use: **sap_flux** or pdcsap_flux
 - `-e`/`--exptime`: optionally filter on exposure time: long, short or fast
@@ -35,6 +36,10 @@ where
 - `-c`/`--clip`: optional time range to clip from any LCs - must have 2 values
 - `-pl`/`--plot-lc`: instructs the pipeline to plot each lightcurve to a png
 - `-pf`/`--plot-fold`: instructs the pipeline to plot each folded LC to a png
+
+The `-sys` or `--sys-name` argument will be set to the same value as the target
+if no value given. It is used for the file and directory name for the output 
+files, with spaces replaced with underscores, and for the title of any plots.
 
 The `-s` or `--sector` argument may be given multiple times, once for each 
 sector required.  If there are no `-s` arguments then all available sectors
@@ -48,7 +53,7 @@ times, only those sectors that overlap a given clip will be affected.
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
 > you remove the need to specify python3 whenever you run ingest.py.
 
-## Ingest JSON file use
+## Ingest target JSON file use
 **Alternatively** a target's pipeline parameters can be set up in a json file 
 and passed to ingest.py with the `-f` or `--file` argument, as follows:
 
@@ -162,6 +167,23 @@ ingest:
 The ./examples/cw_eri.json file is a good example of the range of configuration
 possible using a json file.  Also see the ./library/task3.in.template file to
 see what tokens are set during ingest.
+
+## Generating a new ingest target JSON file
+A new target JSON file can be generated with the `-n` or `--new-file` argument.
+
+```sh
+$ python3 ingest.py -n work/new_sys.json
+```
+where
+- `-n`/`--new-file`: is the file to (over) write out
+
+The new file will be written out with useful default values for most settings.
+Alternatively, you can directly specify many of the values written when the file
+is created by using the command line arguments documented above. The main 
+exception is the target (`-t`) value as the target, file (`-f`) and new-file 
+(`-n`) switches are mutually exclusive. The target value used will be taken from
+the sys-name (if given) or the file name (if not). It is anticipated that you 
+will need to edit the new ingest file before using it for ingest processing.
 
 ## Processing
 The pipeline will carry out the following tasks for the specified system:

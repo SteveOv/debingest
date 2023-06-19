@@ -162,3 +162,4 @@ cython_debug/
 
 # Specific to this project
 staging/
+examples/a_sys.json
