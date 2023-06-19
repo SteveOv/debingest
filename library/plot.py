@@ -12,7 +12,7 @@ def plot_light_curve_on_axes(lc: LightCurve,
                              title: str = None,
                              column: str = "delta_mag",
                              label: str = None,
-                             zorder: int = 0):
+                             zorder: int = 0) -> Axes:
     """
     Plots the passed LightCurve time and delta_mag data on a set of Axes.
     The Axes may be passed in if plotting to an existing figure, otherwise
@@ -43,7 +43,7 @@ def plot_folded_light_curve_on_axes(flc: FoldedLightCurve,
                                     title: str = None,
                                     column: str = "delta_mag",
                                     label: str = None,
-                                    zorder: int = 0):
+                                    zorder: int = 0) -> Axes:
     """
     Plots the passed FoldedLightCurve time and delta_mag data on a set of Axes.
     The Axes may be passed in if plotting to an existing figure, otherwise
