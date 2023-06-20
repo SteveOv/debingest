@@ -182,17 +182,7 @@ for lc in lcs:
     print(f"Estimating system parameters.")
     predictions = model.predict(np.array([np.transpose([mags])]), verbose=0)
     (rA_plus_rB, k, bA, bB, ecosw, esinw, J) = predictions[0, :]
-
-    # Calculate the orbital inclination from the impact parameter.
-    # In training the mae of bA is usually lower, so we'll use that.
-    # inc = arccos( bA * rA * [1+esinw]/[1-e^2] )
-    rA = np.divide(rA_plus_rB, np.add(1, k))
-    omega = np.arctan(np.divide(ecosw, esinw))
-    e = np.divide(ecosw, np.cos(omega))
-    cosi = np.multiply(np.multiply(rA, bA), 
-                       np.divide(np.add(1, esinw), 
-                                 np.subtract(1, np.power(e, 2))))
-    inc = np.rad2deg(np.arccos(cosi))
+    inc = utility.calculate_inclination(bA, rA_plus_rB, k, ecosw, esinw)
 
 
     # ---------------------------------------------------------------------

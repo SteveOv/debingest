@@ -141,3 +141,22 @@ def save_new_ingest_json(file_name: Path,
         json.dump(new_args, f, ensure_ascii=False, indent=2)
         print(f"New ingest target JSON file saved to '{f.name}'")
     return
+
+
+def calculate_inclination(bA: np.double,
+                          rA_plus_rB: np.double,
+                          k: np.double,
+                          ecosw: np.double,
+                          esinw: np.double) -> np.double:
+    """
+    Calculate the orbital inclination from the impact parameter.
+    In training the mae of bA is usually lower, so we'll use that.
+    inc = arccos( bA * rA * [1+esinw]/[1-e^2] )
+    """
+    rA = np.divide(rA_plus_rB, np.add(1, k))
+    omega = np.arctan(np.divide(ecosw, esinw))
+    e = np.divide(ecosw, np.cos(omega))
+    cosi = np.multiply(np.multiply(rA, bA), 
+                       np.divide(np.add(1, esinw), 
+                                 np.subtract(1, np.power(e, 2))))
+    return np.rad2deg(np.arccos(cosi))
