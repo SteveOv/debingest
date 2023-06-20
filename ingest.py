@@ -52,10 +52,10 @@ ap.add_argument("-q", "--quality", type=str, dest="quality_bitmask",
                 help="Quality bitmask to filter out low quality data (may be a \
                     numerical bitmask or text: none, default, hard, hardest). \
                     The default value is default.")
-ap.add_argument("-qc", "--quality-clip", type=np.double, 
-                nargs=2, dest="quality_clips", action="append",
-                help="A time range (from, to) to clip away problematic data \
-                    from light-curves prior to processing. Multiple clip \
+ap.add_argument("-qm", "--quality-mask", type=np.double, 
+                nargs=2, dest="quality_masks", action="append",
+                help="A time range (from, to) to mask out problematic data \
+                    from light-curves prior to processing. Multiple qm \
                     arguments are supported.")
 ap.add_argument("-p", "--period", type=np.double, dest="period",
                 help="The period, in days, of the system. If not specified the \
@@ -66,17 +66,17 @@ ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
 ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
                 action="store_true", required=False,
                 help="Write a plot of each sector folded data to a png file")
-ap.add_argument("-tc", "--trim-clip", type=np.double, 
-                nargs=2, dest="trim_clips", action="append",
+ap.add_argument("-tm", "--trim-mask", type=np.double, 
+                nargs=2, dest="trim_masks", action="append",
                 help="A time range (from, to) to trim from the final \
                     light-curve to reduce the data processing on fitting. \
-                    Multiple trim arguments are supported.")
+                    Multiple tm arguments are supported.")
 
 ap.set_defaults(target=None, file=None, new_file=None, sys_name=None,
                 sectors=[], mission="TESS", author="SPOC", exptime=None,
                 flux_column="sap_flux", quality_bitmask="default", 
-                quality_clips=[], period=None, plot_lc=False, plot_fold=False, 
-                polies=[], trim_clips=[], fitting_params={})
+                quality_masks=[], period=None, plot_lc=False, plot_fold=False, 
+                polies=[], trim_masks=[], fitting_params={})
 args = ap.parse_args()
 
 
@@ -161,19 +161,19 @@ for lc in lcs:
 
 
     # ---------------------------------------------------------------------
-    # Apply any additional data filters (NaN/negative fluxes, date range)
+    # Apply any additional data masks (NaN/negative fluxes, date range)
     # ---------------------------------------------------------------------
-    # We'll still need to filter out NaN & negative fluxes as they may still be 
+    # We'll need to explicitly mask NaNs & negative fluxes as they may still be 
     # present (only hardest seems to exclude them) and they'll break detrending.
-    # Similarly, filter user defined ranges of suspect quality/abberations.
+    # Similarly, mask user defined ranges of suspect quality/abberations.
     filter_mask = np.isnan(lc.flux)
     filter_mask |= lc.flux < 0
-    print(f"NaN/negative flux clip masks {sum(filter_mask.unmasked)} row(s).")
+    print(f"NaN/negative flux masks affect {sum(filter_mask.unmasked)} row(s).")
 
-    if args.quality_clips and len(args.quality_clips):
-        print(f"Applying quality clip masks")
-        for clip in args.quality_clips:
-            filter_mask |= lightcurves.mask_from_time_range(lc, clip)
+    if args.quality_masks and len(args.quality_masks):
+        print(f"Applying time range quality masks")
+        for qm in args.quality_masks:
+            filter_mask |= lightcurves.mask_from_time_range(lc, qm)
 
     lc = lc[~filter_mask]
     print(f"Additional filters mask {sum(filter_mask.unmasked)} "\
@@ -267,11 +267,11 @@ for lc in lcs:
     # ---------------------------------------------------------------------
     # Apply any user requests to trim the light-curves (for data reduction)
     # ---------------------------------------------------------------------
-    if args.trim_clips is not None and len(args.trim_clips) > 0:
-        print(f"Trimming final light-curve")
+    if args.trim_masks is not None and len(args.trim_masks) > 0:
+        print(f"Applying requested trim masks to final light-curve")
         trim_mask = [False] * len(lc)
-        for trim_clip in args.trim_clips:
-            trim_mask |= lightcurves.mask_from_time_range(lc, trim_clip)
+        for tm in args.trim_masks:
+            trim_mask |= lightcurves.mask_from_time_range(lc, tm)
         lc = lc[~trim_mask]
         print(f"Trimming masks {sum(trim_mask)} row(s) leaving {len(lc)}.")
 

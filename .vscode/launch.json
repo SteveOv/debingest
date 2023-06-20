@@ -25,9 +25,10 @@
                 "--sector", "31",
                 "--flux", "sap_flux", 
                 "--quality", "hardest", 
+                "--quality-mask", "58420.00", "58423.00",
                 "--plot-lc", 
                 "--plot-fold", 
-                "--quality-clip", "58420.00", "58423.00"
+
             ]
         },
         {
@@ -60,7 +61,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "-n", "./examples/a_sys.json", "-sys", "A Sys", "-s", "20", "-e", "short", "-q", "hardest", "-qc", "51000", "51010", "-p", "2.8008", "-pf", "-pl", "-tc", "51011", "51013"
+                "-n", "./examples/a_sys.json", "-sys", "A Sys", "-s", "20", "-e", "short", "-q", "hardest", "-qm", "51000", "51010", "-p", "2.8008", "-pf", "-pl", "-tm", "51011", "51013"
             ]
         },
         {

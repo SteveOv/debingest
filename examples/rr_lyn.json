@@ -4,7 +4,7 @@
     ],
     "flux_column": "sap_flux",
     "quality_bitmask": "hardest",
-    "quality_clips": [
+    "quality_masks": [
     ],
     "period": 9.945120,
     "plot_lc": true,
@@ -12,7 +12,7 @@
     "polies": [
         { "term": "sf", "degree": 1, "gap_threshold": 0.5 }
     ],
-    "trim_clips":[
+    "trim_masks":[
         [58842.00, 58845.50],
         [58847.50, 58850.75],
         [58853.00, 58860.75],

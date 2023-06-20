@@ -23,7 +23,7 @@ The entry point for this pipeline is `ingest.py`.  This should be run in the
 context of the `debingest` environment, with example usage shown below;
 
 ```sh
-$ python3 ingest.py -t 'CW Eri' -s 4 -s 31 -fl sap_flux -q hard -p 2.73 -c 58420.0 58423.0 -pl -pf 
+$ python3 ingest.py -t 'CW Eri' -s 4 -s 31 -fl sap_flux -q hard -p 2.73 -qm 58420.0 58423.0 -pl -pf 
 ```
 where
 - `-t`/`--target`: required MAST identifier for the target system to process
@@ -32,15 +32,15 @@ where
 - `-fl`/`--flux`: the flux data column to use: **sap_flux** or pdcsap_flux
 - `-e`/`--exptime`: optionally filter on exposure time: long, short or fast
 - `-q`/`--quality`: the quality filter set: none, **default**, hard or hardes
-- `-qc`/`--quality-clip`: optional time range to clip from any LCs
+- `-qm`/`--quality-mask`: optional time range to mask from any LCs
   - must have two values - a start and end time (i.e.: -qc 51000.0 52020.0)
-  - clips are applied after download and before detrending & conversion to mags
+  - these are applied after download and before detrending & conversion to mags
 - `-p`/`--period`: the optional orbital period to use - calculated if omittedes
 - `-pl`/`--plot-lc`: instructs the pipeline to plot each lightcurve to a png
 - `-pf`/`--plot-fold`: instructs the pipeline to plot each folded LC to a png
-- `-tc`/`--trim-clip`: optional time range to trim from the final LCs
+- `-tm`/`--trim-mask`: optional time range to trim from the final LCs
   - must have two values - a start and end time (i.e.: -tc 51005.0 51007.5)
-  - trim clips are applied last thing before writting JKTEBOP in & dat files
+  - trim masks are applied last thing before writting JKTEBOP in & dat files
 
 The `-sys` or `--sys-name` argument will be set to the same value as the target
 if no value given. It is used for the file and directory name for the output 
@@ -50,10 +50,10 @@ The `-s` or `--sector` argument may be given multiple times, once for each
 sector required.  If there are no `-s` arguments then all available sectors
 are found for processing. 
 
-The `-qc`/`--quality-clip` and `-tc`/`--trim-clip` arguments may be specified 
-multiple times if you require clipping of multiple time ranges or sectors. You 
-cannot specify which sector a clip applies to but, as their observations will 
-cover different times, only those that overlap a given clip will be affected.
+The `-qm`/`--quality-mask` and `-tm`/`--trim-mask` arguments may be specified 
+multiple times if masking of multiple time ranges or sectors is required. You 
+cannot specify which sector a mask applies to but, as their observations will 
+cover different times, only those that overlap a given mask will be affected.
 
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
 > you remove the need to specify python3 whenever you run ingest.py.
@@ -80,14 +80,14 @@ line arguments (with the same default values and behaviour).
   ],
   "flux_column": "sap_flux",
   "quality_bitmask": "hard",
-  "quality_clips": [
+  "quality_masks": [
     [58420.0, 58423.0]
   ],
   "period": 2.73,
   "plot_lc": true,
   "plot_fold": true,
   "polies": [],
-  "trim_clips": [],
+  "trim_masks": [],
   "fitting_params": {}
 }
 ```
@@ -195,8 +195,8 @@ The pipeline will carry out the following tasks for the specified system:
 - any located fits files are downloaded
 - for each fits/sector:
   - the fits file is read and filtered based on the `--quality` argument
-  - the data is filtered removing rows where the `--flux` column is NaN
-  - the `--quality-clip` ranges are applied - any data within these are removed
+  - the data is filtered removing rows where the `--flux` column is NaN or <0.0
+  - the `--quality-mask` ranges are applied - any data within these are excluded
   - magnitudes are calculated from the `--flux` and corresponding error columns
     - a low order polynomial is subtracted to detrend the data
     - this also y-shifts the data so that the magnitudes are relative to zero
@@ -204,13 +204,13 @@ The pipeline will carry out the following tasks for the specified system:
   - if no `--period` specified, an estimate period will be found from eclipses
   - if `--plot-lc` the light-curve & primary epoch is plotted to a png
   - the magnitude data is phase-folded on the primary eclipse/period
-    - a 1024 bin interpolated phase-folded light-curve is derived from this
+    - a 1024 point interpolated phase-folded light-curve is derived from this
     - this is passed to a Machine-Learning model for system parameter estimation
     - if `--plot-fold` both folded light-curves are plotted to a png
   - any configured `polies` instructions are generated 
-  - the `--trim-clip` ranges are applied - removing excess data from the LC
+  - the `--trim-mask` ranges are applied to exclude excess data from the LC
     - if `--plot-lc` a second "_trimmed" light-curve is plotted to a png
-  - the filtered & trimmed LC magnitude data is written to a JKTEBOP dat file
+  - the filtered & masked LC magnitude data is written to a JKTEBOP dat file
   - the estimated system parameters are used to write a JKTEBOP _task 3_ in file
     - any overrides from the fitting_params are applied
     - any polies generated above are appended
