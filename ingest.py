@@ -66,11 +66,17 @@ ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
 ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
                 action="store_true", required=False,
                 help="Write a plot of each sector folded data to a png file")
+ap.add_argument("-tc", "--trim-clip", type=np.double, 
+                nargs=2, dest="trim_clips", action="append",
+                help="A time range (from, to) to trim from the final \
+                    light-curve to reduce the data processing on fitting. \
+                    Multiple trim arguments are supported.")
+
 ap.set_defaults(target=None, file=None, new_file=None, sys_name=None,
                 sectors=[], mission="TESS", author="SPOC", exptime=None,
-                flux_column="sap_flux", quality_bitmask="default", period=None, 
-                quality_clips=[], polies=[], fitting_params={}, 
-                plot_lc=False, plot_fold=False)
+                flux_column="sap_flux", quality_bitmask="default", 
+                quality_clips=[], period=None, plot_lc=False, plot_fold=False, 
+                polies=[], trim_clips=[], fitting_params={})
 args = ap.parse_args()
 
 
@@ -253,6 +259,29 @@ for lc in lcs:
 
 
     # ---------------------------------------------------------------------
+    # Build polies before trimming so they're not affected by gaps from trimming
+    # ---------------------------------------------------------------------    
+    poly_instructions = jktebop.build_polies_for_lc(lc, args.polies)
+
+
+    # ---------------------------------------------------------------------
+    # Apply any user requests to trim the light-curves (for data reduction)
+    # ---------------------------------------------------------------------
+    if args.trim_clips is not None and len(args.trim_clips) > 0:
+        print(f"Trimming final light-curve")
+        trim_mask = [False] * len(lc)
+        for trim_clip in args.trim_clips:
+            trim_mask |= lightcurves.mask_from_time_range(lc, trim_clip)
+        lc = lc[~trim_mask]
+        print(f"Trimming masks {sum(trim_mask)} row(s) leaving {len(lc)}.")
+
+        if args.plot_lc:
+            ax = plot.plot_light_curve_on_axes(
+                    lc, title=f"Trimmed {sys_name} sector {sector} light-curve")
+            plt.savefig(staging_dir / (file_stem + "_trimmed.png"), dpi=300)
+
+
+    # ---------------------------------------------------------------------
     # Generate JKTEBOP .dat and .in file for task3.
     # ---------------------------------------------------------------------
     overrides = args.fitting_params if args.fitting_params else {}
@@ -284,8 +313,7 @@ for lc in lcs:
         **overrides
     }
 
-    appends = jktebop.build_polies_for_lc(lc, args.polies)
     jktebop.write_task3_in_file(staging_dir / (file_stem + ".in"), 
-                                appends, **params)
+                                poly_instructions, **params)
     jktebop.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
     print(f"JKTEBOP dat & in files were written to {staging_dir.resolve()}")

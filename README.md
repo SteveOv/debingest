@@ -23,7 +23,7 @@ The entry point for this pipeline is `ingest.py`.  This should be run in the
 context of the `debingest` environment, with example usage shown below;
 
 ```sh
-$ python3 ingest.py -t 'CW Eri' -s 4 -s 31 -fl sap_flux -q hard -p 2.72837 -c 58420.0 58423.0 -pl -pf 
+$ python3 ingest.py -t 'CW Eri' -s 4 -s 31 -fl sap_flux -q hard -p 2.73 -c 58420.0 58423.0 -pl -pf 
 ```
 where
 - `-t`/`--target`: required MAST identifier for the target system to process
@@ -38,6 +38,9 @@ where
 - `-p`/`--period`: the optional orbital period to use - calculated if omittedes
 - `-pl`/`--plot-lc`: instructs the pipeline to plot each lightcurve to a png
 - `-pf`/`--plot-fold`: instructs the pipeline to plot each folded LC to a png
+- `-tc`/`--trim-clip`: optional time range to trim from the final LCs
+  - must have two values - a start and end time (i.e.: -tc 51005.0 51007.5)
+  - trim clips are applied last thing before writting JKTEBOP in & dat files
 
 The `-sys` or `--sys-name` argument will be set to the same value as the target
 if no value given. It is used for the file and directory name for the output 
@@ -47,10 +50,10 @@ The `-s` or `--sector` argument may be given multiple times, once for each
 sector required.  If there are no `-s` arguments then all available sectors
 are found for processing. 
 
-The `-qc` or `--quality-clip` argument may be specified multiple times if you 
-require clipping of multiple time ranges or sectors. You cannot specify which 
-sectors a clip applies to but, as the sectors will have been observed at 
-different times, only those sectors that overlap a given clip will be affected.
+The `-qc`/`--quality-clip` and `-tc`/`--trim-clip` arguments may be specified 
+multiple times if you require clipping of multiple time ranges or sectors. You 
+cannot specify which sector a clip applies to but, as their observations will 
+cover different times, only those that overlap a given clip will be affected.
 
 > If you first run `chmod +x ingest.py` (or equivalent) in the terminal 
 > you remove the need to specify python3 whenever you run ingest.py.
@@ -77,12 +80,15 @@ line arguments (with the same default values and behaviour).
   ],
   "flux_column": "sap_flux",
   "quality_bitmask": "hard",
-  "clips": [
+  "quality_clips": [
     [58420.0, 58423.0]
   ],
-  "period": 2.72837,
+  "period": 2.73,
   "plot_lc": true,
-  "plot_fold": true
+  "plot_fold": true,
+  "polies": [],
+  "trim_clips": [],
+  "fitting_params": {}
 }
 ```
 
@@ -153,10 +159,6 @@ ingest:
     "L3": 0.080,
     "LD_A": "pow2",
     "LD_B": "pow2",
-    "LD_A1": 0.6437,
-    "LD_B1": 0.6445,       
-    "LD_A1_fit": 1,
-    "LD_B1_fit": 1,
     "LD_A2": 0.4676,
     "LD_B2": 0.4967,
     "LD_A2_fit": 0,
@@ -194,7 +196,7 @@ The pipeline will carry out the following tasks for the specified system:
 - for each fits/sector:
   - the fits file is read and filtered based on the `--quality` argument
   - the data is filtered removing rows where the `--flux` column is NaN
-  - the `--clip` ranges are applied - any data within these are removed
+  - the `--quality-clip` ranges are applied - any data within these are removed
   - magnitudes are calculated from the `--flux` and corresponding error columns
     - a low order polynomial is subtracted to detrend the data
     - this also y-shifts the data so that the magnitudes are relative to zero
@@ -205,7 +207,10 @@ The pipeline will carry out the following tasks for the specified system:
     - a 1024 bin interpolated phase-folded light-curve is derived from this
     - this is passed to a Machine-Learning model for system parameter estimation
     - if `--plot-fold` both folded light-curves are plotted to a png
-  - the filtered light-curve magnitude data is written to a JKTEBOP dat file
+  - any configured `polies` instructions are generated 
+  - the `--trim-clip` ranges are applied - removing excess data from the LC
+    - if `--plot-lc` a second "_trimmed" light-curve is plotted to a png
+  - the filtered & trimmed LC magnitude data is written to a JKTEBOP dat file
   - the estimated system parameters are used to write a JKTEBOP _task 3_ in file
     - any overrides from the fitting_params are applied
-    - this includes the appropriate poly instructions for the data's time range
+    - any polies generated above are appended

@@ -60,7 +60,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "-n", "./examples/a_sys.json", "-sys", "A Sys", "-s", "20", "-e", "short", "-q", "hardest", "-qc", "51000", "51010", "-p", "2.8008", "-pf", "-pl"
+                "-n", "./examples/a_sys.json", "-sys", "A Sys", "-s", "20", "-e", "short", "-q", "hardest", "-qc", "51000", "51010", "-p", "2.8008", "-pf", "-pl", "-tc", "51011", "51013"
             ]
         },
         {
