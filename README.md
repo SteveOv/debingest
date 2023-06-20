@@ -33,13 +33,13 @@ where
 - `-e`/`--exptime`: optionally filter on exposure time: long, short or fast
 - `-q`/`--quality`: the quality filter set: none, **default**, hard or hardes
 - `-qm`/`--quality-mask`: optional time range to mask from any LCs
-  - must have two values - a start and end time (i.e.: -qc 51000.0 52020.0)
+  - must have two values - a start and end time (i.e.: -qm 51000.0 52020.0)
   - these are applied after download and before detrending & conversion to mags
 - `-p`/`--period`: the optional orbital period to use - calculated if omittedes
 - `-pl`/`--plot-lc`: instructs the pipeline to plot each lightcurve to a png
 - `-pf`/`--plot-fold`: instructs the pipeline to plot each folded LC to a png
 - `-tm`/`--trim-mask`: optional time range to trim from the final LCs
-  - must have two values - a start and end time (i.e.: -tc 51005.0 51007.5)
+  - must have two values - a start and end time (i.e.: -tm 51005.0 51007.5)
   - trim masks are applied last thing before writting JKTEBOP in & dat files
 
 The `-sys` or `--sys-name` argument will be set to the same value as the target
