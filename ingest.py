@@ -177,11 +177,11 @@ for lc in lcs:
     # Use the ML model to estimate system parameters
     # ---------------------------------------------------------------------   
     # Now we can invoke the ML model to interpret the folded data & estimate
-    # the parameters for JKTEBOP. Need the mag data in shape[1, 1024, 1]
-    # Predictions for a single model will have shape[1, 7]
+    # the parameters for JKTEBOP. Need the mag data for LCs in 
+    # shape[#LCs, 1024, 1] giving predictions with shape[#LCs, #features]
     print(f"Estimating system parameters.")
     predictions = model.predict(np.array([np.transpose([mags])]), verbose=0)
-    (rA_plus_rB, k, bA, bB, ecosw, esinw, J) = predictions[0, :]
+    (rA_plus_rB, k, bA, inc, ecosw, esinw, J, L3) = predictions[0, :]
     inc = utility.calculate_inclination(bA, rA_plus_rB, k, ecosw, esinw)
 
 
@@ -220,7 +220,7 @@ for lc in lcs:
         "esinw": esinw,
         "ecosw": ecosw,
         "J": J,
-        "L3": 0.,
+        "L3": L3,
         "L3_fit": 1,
         "LD_A": "quad",
         "LD_B": "quad",
