@@ -182,7 +182,11 @@ for lc in lcs:
     print(f"Estimating system parameters.")
     predictions = model.predict(np.array([np.transpose([mags])]), verbose=0)
     (rA_plus_rB, k, bA, inc, ecosw, esinw, J, L3) = predictions[0, :]
-    inc = utility.calculate_inclination(bA, rA_plus_rB, k, ecosw, esinw)
+
+    # The directly predicted inc needs scaling up
+    inc *= 100
+    inc_calc = utility.calculate_inclination(bA, rA_plus_rB, k, ecosw, esinw)
+    print(f"Inclination {inc:.6f} (prediction), {inc_calc:.6f} (calculation).")
 
 
     # ---------------------------------------------------------------------
