@@ -13,85 +13,21 @@ from tensorflow.keras.models import load_model
 
 from library import lightcurves, plot, jktebop, utility
 
-# -------------------------------------------------------------------
-# Command line will contain a list of systems to ingest and options
-# -------------------------------------------------------------------
-ap = argparse.ArgumentParser(description=utility.help_description)
 
-# Must have 1 of these two. User must specify the target (& all other args) at
-# the command line or specify a json file (& the args are read from file with
-# overrides from the command line where given in both [specific code for this]).
-group = ap.add_mutually_exclusive_group(required=True)
-group.add_argument("-t", "--target", type=str, dest="target",
-                help="Search identifier for the system to ingest.")
-group.add_argument("-f", "--file", type=Path, dest="file",
-                help="JSON file containing ingest configuration for a target.")
-group.add_argument("-n", "--new-file", type=str, dest="new_file",
-                help="Name of new JSON config file to generate")
-
-# These are not part of the group above
-ap.add_argument("-sys", "--sys-name", type=str, 
-                dest="sys_name", default=None,
-                help="The system name if different to target.")
-ap.add_argument("-s", "--sector", type=int, 
-                dest="sectors", action="append", 
-                help="A sector to search for, or omit to search on all sectors.\
-                    Multiple sector arguments supported.")
-#ap.add_argument("-m", "--mission", type=str, dest="mission", default="TESS",
-#                help="The source mission: currently only TESS supported")
-#ap.add_argument("-a", "--author", type=str, dest="author", default="SPOC",
-#                help="The author of the data: currently only SPOC supported")
-ap.add_argument("-fl", "--flux", type=str, 
-                dest="flux_column", default="sap_flux",
-                help="The flux column to use: sap_flux or pdcsap_flux. \
-                    The default is sap_flux.")
-ap.add_argument("-e", "--exptime", type=str, dest="exptime",
-                help="Exposure time/cadence: set to long, short, fast or an \
-                    exact time in seconds. If omitted Will retrieve all.")
-ap.add_argument("-q", "--quality", type=str, dest="quality_bitmask",
-                help="Quality bitmask to filter out low quality data (may be a \
-                    numerical bitmask or text: none, default, hard, hardest). \
-                    The default value is default.")
-ap.add_argument("-qm", "--quality-mask", type=np.double, 
-                nargs=2, dest="quality_masks", action="append",
-                help="A time range (from, to) to mask out problematic data \
-                    from light-curves prior to processing. Multiple qm \
-                    arguments are supported.")
-ap.add_argument("-p", "--period", type=np.double, dest="period",
-                help="The period, in days, of the system. If not specified the \
-                    period will be calculated on light-curve eclipse spacing.")
-ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
-                action="store_true", required=False,
-                help="Write a plot of each sector's light-curve to a png file")
-ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
-                action="store_true", required=False,
-                help="Write a plot of each sector folded data to a png file")
-ap.add_argument("-tm", "--trim-mask", type=np.double, 
-                nargs=2, dest="trim_masks", action="append",
-                help="A time range (from, to) to trim from the final \
-                    light-curve to reduce the data processing on fitting. \
-                    Multiple tm arguments are supported.")
-
-ap.set_defaults(target=None, file=None, new_file=None, sys_name=None,
-                sectors=[], mission="TESS", author="SPOC", exptime=None,
-                flux_column="sap_flux", quality_bitmask="default", 
-                quality_masks=[], period=None, plot_lc=False, plot_fold=False, 
-                polies=[], trim_masks=[], fitting_params={})
+# ---------------------------------------------------------------------
+# Handle setting up and interpreting the ingest target configuration
+# ---------------------------------------------------------------------
+ap = utility.set_up_argument_parser()
 args = ap.parse_args()
-
-
-# ---------------------------------------------------------------------
-# Handle setting up the pipeline processing configuration
-# ---------------------------------------------------------------------
 if args.new_file is not None:
     new_file = Path(args.new_file)
     utility.save_new_ingest_json(new_file, args)
     quit()
 elif args.file:
     print(f"Configuring pipeline from {args.file} & any command line overrides")
-    # Read the JSON file and use it as the basis of our pipeline arguments but
-    # with overrides from the command line arguments to apply missing default
-    # values or otherwise override where non-default values have been given.
+    # Read the JSON file and use it as the basis of our target config but with
+    # overrides from the command line to apply missing default values or 
+    # otherwise override where non-default values have been given.
     with open(args.file, "r") as f:
         file_args = json.load(f)
         overrides = {k: v for k, v in vars(args).items() 
@@ -100,6 +36,7 @@ elif args.file:
 else:
     print(f"Configuring pipeline based on command line arguments")
 
+utility.echo_ingest_parameters(args)
 detrend_clip = 0.5
 ml_phase_bins = 1024
 
@@ -109,7 +46,7 @@ sys_file_label = "".join(c for c in sys_name if c not in r':*?"\/<>|').\
     replace(' ', '_')
 staging_dir = Path(f"./staging/{sys_file_label}")
 staging_dir.mkdir(parents=True, exist_ok=True)
-
+print(f"\nOutput will be written to {staging_dir}")
 
 # ---------------------------------------------------------------------
 # Use MAST to DL any timeseries/light-curves for the system/sector(s)
