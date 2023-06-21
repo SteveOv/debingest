@@ -63,6 +63,9 @@ contains the JKTEBOP processing parameters and instructions.")
                     help="a time range (from, to) to mask out problematic data \
                         from light-curves prior to processing (multiple -qm \
                         args supported)")
+    ap.add_argument("-b", "--bin-time", type=np.double, dest="bin_time",
+                    help="optionally bin the light-curve into bins of this \
+                        duration (in seconds)")
     ap.add_argument("-p", "--period", type=np.double, dest="period",
                     help="the period of the system (in days) if you wish to \
                     override the ingest calculated period")
@@ -81,7 +84,7 @@ contains the JKTEBOP processing parameters and instructions.")
     ap.set_defaults(target=None, file=None, new_file=None, sys_name=None,
                     sectors=[], mission="TESS", author="SPOC", exptime=None,
                     flux_column="sap_flux", quality_bitmask="default", 
-                    quality_masks=[], period=None, 
+                    quality_masks=[], bin_time=None, period=None, 
                     plot_lc=False, plot_fold=False, 
                     polies=[], trim_masks=[], fitting_params={})
     

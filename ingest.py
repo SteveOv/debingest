@@ -118,6 +118,20 @@ for lc in lcs:
 
 
     # ---------------------------------------------------------------------
+    # Optional binning of the light-curve
+    # ---------------------------------------------------------------------
+    if args.bin_time and args.bin_time > 0:
+        bin_time = args.bin_time * u.s
+        if int_time.to(u.s) >= bin_time:
+            print(f"Light-curve already in bins >= {bin_time}")
+        else:
+            print(f"Binning light-curve to bins of {bin_time} duration.")
+            lc = lc.bin(time_bin_size=bin_time, aggregate_func=np.nanmean)
+            lc = lc[~np.isnan(lc.flux)] # Binning may have re-introduced NaNs
+            print(f"After binning light-curve has {len(lc)} rows.")
+
+
+    # ---------------------------------------------------------------------
     # Convert to relative mags with fitted polynomial detrending
     # ---------------------------------------------------------------------
     print(f"Detrending & 'zeroing' magnitudes by subtracting polynomial.")

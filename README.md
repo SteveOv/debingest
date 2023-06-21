@@ -23,7 +23,7 @@ The entry point for this pipeline is `ingest.py`.  This should be run in the
 context of the `debingest` environment, with example usage shown below;
 
 ```sh
-$ python3 ingest.py -t 'CW Eri' -s 4 -s 31 -fl sap_flux -q hard -p 2.73 -qm 58420.0 58423.0 -pl -pf 
+$ python3 ingest.py -t 'CW Eri' -s 4 -fl sap_flux -q hard -b 240 -p 2.73 -qm 58420.0 58423.0 -pl -pf 
 ```
 where
 - `-t`/`--target`: required MAST identifier for the target system to process
@@ -35,6 +35,7 @@ where
 - `-qm`/`--quality-mask`: optional time range to mask from any LCs
   - must have two values - a start and end time (i.e.: -qm 51000.0 52020.0)
   - these are applied after download and before detrending & conversion to mags
+- `-b`/`--bin-time`: optionally bin the data to bins of this duration (seconds)
 - `-p`/`--period`: the optional orbital period to use - calculated if omittedes
 - `-pl`/`--plot-lc`: instructs the pipeline to plot each lightcurve to a png
 - `-pf`/`--plot-fold`: instructs the pipeline to plot each folded LC to a png
@@ -75,14 +76,14 @@ line arguments (with the same default values and behaviour).
 {
   "target": "CW Eri",
   "sectors": [
-    4,
-    31
+    4
   ],
   "flux_column": "sap_flux",
   "quality_bitmask": "hard",
   "quality_masks": [
     [58420.0, 58423.0]
   ],
+  "bin_time": 240,
   "period": 2.73,
   "plot_lc": true,
   "plot_fold": true,
@@ -197,6 +198,7 @@ The pipeline will carry out the following tasks for the specified system:
   - the fits file is read and filtered based on the `--quality` argument
   - the data is filtered removing rows where the `--flux` column is NaN or <0.0
   - the `--quality-mask` ranges are applied - any data within these are excluded
+  - if `--bin-time` given, the LC is binned to bins of this duration (seconds)
   - magnitudes are calculated from the `--flux` and corresponding error columns
     - a low order polynomial is subtracted to detrend the data
     - this also y-shifts the data so that the magnitudes are relative to zero
