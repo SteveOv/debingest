@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import os
+import re
 import argparse
 import textwrap
 import json
@@ -39,14 +40,16 @@ else:
 utility.echo_ingest_parameters(args)
 detrend_clip = 0.5
 ml_phase_bins = 1024
-
 sys_name = args.sys_name if args.sys_name else args.target
-sys_file_label = "".join(c for c in sys_name if c not in r':*?"\/<>|').\
-    lower(). \
-    replace(' ', '_')
-staging_dir = Path(f"./staging/{sys_file_label}")
-staging_dir.mkdir(parents=True, exist_ok=True)
-print(f"\nOutput will be written to {staging_dir}")
+
+# Set up output locations and file prefixing (& make sure chars are safe subset)
+prefix = re.sub(r'[^\w\d-]', 
+                '_', 
+                args.prefix if args.prefix else sys_name.lower())
+output_dir = args.output_dir if args.output_dir else Path("./staging") / prefix
+output_dir.mkdir(parents=True, exist_ok=True)
+print(f"\nWill write files prefixed '{prefix}' to directory {output_dir}")
+
 
 # ---------------------------------------------------------------------
 # Use MAST to DL any timeseries/light-curves for the system/sector(s)
@@ -56,7 +59,7 @@ results = lk.search_lightcurve(target=args.target, sector=args.sectors,
                                mission=args.mission, author=args.author,
                                exptime=args.exptime)
 if results:
-    lcs = results.download_all(download_dir=f"{staging_dir}", cache=True, 
+    lcs = results.download_all(download_dir=f"{output_dir}", cache=True, 
                                flux_column=args.flux_column, 
                                quality_bitmask=args.quality_bitmask)
 
@@ -85,7 +88,7 @@ for lc in lcs:
     sector = f"{lc.meta['SECTOR']:0>4}"
     tic = f"{lc.meta['OBJECT']}"
     int_time = (lc.meta["INT_TIME"] + lc.meta["READTIME"]) * u.min
-    file_stem = f"{sys_file_label}_s{sector}"
+    file_stem = f"{prefix}_s{sector}"
 
     narrative = f"Processing {len(lc)} row(s) of {args.flux_column} data "\
         f"(meeting the quality bitmask of {args.quality_bitmask}) "\
@@ -165,7 +168,7 @@ for lc in lcs:
         primary_mag = lc["delta_mag"][primary_epoch_ix]
         ax.scatter([primary_epoch.value], [primary_mag.value], zorder=-10,
                    marker="x", s=64., lw=.5, c="k", label="primary eclipse")
-        plt.savefig(staging_dir / (file_stem + "_lightcurve.png"), dpi=300)
+        plt.savefig(output_dir / (file_stem + "_lightcurve.png"), dpi=300)
 
 
     # ---------------------------------------------------------------------
@@ -184,7 +187,7 @@ for lc in lcs:
                     title = f"Folded light-curve of {sys_name} sector {sector}")
         ax.scatter(phases, mags, c="k", marker="+", 
                    s=8, alpha=.5, linewidth=.5, zorder=10)
-        plt.savefig(staging_dir / (file_stem + "_folded.png"), dpi=300)
+        plt.savefig(output_dir / (file_stem + "_folded.png"), dpi=300)
 
 
     # ---------------------------------------------------------------------
@@ -223,7 +226,7 @@ for lc in lcs:
         if args.plot_lc:
             ax = plot.plot_light_curve_on_axes(
                     lc, title=f"Trimmed {sys_name} sector {sector} light-curve")
-            plt.savefig(staging_dir / (file_stem + "_trimmed.png"), dpi=300)
+            plt.savefig(output_dir / (file_stem + "_trimmed.png"), dpi=300)
 
 
     # ---------------------------------------------------------------------
@@ -258,7 +261,7 @@ for lc in lcs:
         **overrides
     }
 
-    jktebop.write_task3_in_file(staging_dir / (file_stem + ".in"), 
+    jktebop.write_task3_in_file(output_dir / (file_stem + ".in"), 
                                 poly_instructions, **params)
-    jktebop.write_data_to_dat_file(lc, staging_dir / (file_stem + ".dat"))
-    print(f"JKTEBOP dat & in files were written to {staging_dir.resolve()}")
+    jktebop.write_data_to_dat_file(lc, output_dir / (file_stem + ".dat"))
+    print(f"JKTEBOP dat & in files were written to {output_dir.resolve()}")

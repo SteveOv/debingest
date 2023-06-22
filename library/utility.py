@@ -25,7 +25,7 @@ relative magnitudes being written to a text dat file and the primary \
 epoch, period and estimated parameters used to create the in file which \
 contains the JKTEBOP processing parameters and instructions.")
 
-    # Must have 1 of these two. User must specify the target (& all other args) 
+    # Must have 1 of these 3. User must specify the target (& all other args) 
     # at the command line or specify a json file so the args are read from file
     # (cmd line args still read as an override of file [specific code for this])
     group = ap.add_mutually_exclusive_group(required=True)
@@ -40,6 +40,11 @@ contains the JKTEBOP processing parameters and instructions.")
     ap.add_argument("-sys", "--sys-name", type=str, 
                     dest="sys_name", default=None,
                     help="the system name if different to target")
+    ap.add_argument("-pr", "--prefix", type=str, dest="prefix", 
+                    help="prefix for output files (defaults to sys-name)")
+    ap.add_argument("-o", "--output-dir", type=Path, dest="output_dir", 
+                    help="directory to write to (defaults to staging/sys-name)")
+    
     ap.add_argument("-s", "--sector", type=int, 
                     dest="sectors", action="append", metavar="SECTOR",
                     help="specific sector to find (multiple -s args supported)")
@@ -54,6 +59,7 @@ contains the JKTEBOP processing parameters and instructions.")
     ap.add_argument("-e", "--exptime", type=str, dest="exptime",
                     help="exposure time/cadence with options of long, short, \
                         fast or an exact time in seconds (any if omitted)")
+    
     ap.add_argument("-q", "--quality", type=str, dest="quality_bitmask",
                     help="quality bitmask to exclude poor quality data: may be \
                         a numerical bitmask or text {none, default, hard, \
@@ -63,18 +69,21 @@ contains the JKTEBOP processing parameters and instructions.")
                     help="a time range (from, to) to mask out problematic data \
                         from light-curves prior to processing (multiple -qm \
                         args supported)")
+    
     ap.add_argument("-b", "--bin-time", type=np.double, dest="bin_time",
                     help="optionally bin the light-curve into bins of this \
                         duration (in seconds)")
     ap.add_argument("-p", "--period", type=np.double, dest="period",
                     help="the period of the system (in days) if you wish to \
                     override the ingest calculated period")
+    
     ap.add_argument("-pl", "--plot-lc", dest="plot_lc",
                     action="store_true", required=False,
                     help="plot of each sector's light-curve to a png file")
     ap.add_argument("-pf", "--plot-fold", dest="plot_fold",
                     action="store_true", required=False,
                     help="plot of each sector folded data to a png file")
+    
     ap.add_argument("-tm", "--trim-mask", type=np.double, 
                     nargs=2, dest="trim_masks", action="append", metavar="TIME",
                     help="a time range (from, to) to trim from the final \
@@ -82,6 +91,7 @@ contains the JKTEBOP processing parameters and instructions.")
                         (multiple -tm args supported)")
 
     ap.set_defaults(target=None, file=None, new_file=None, sys_name=None,
+                    prefix=None, output_dir=None,
                     sectors=[], mission="TESS", author="SPOC", exptime=None,
                     flux_column="sap_flux", quality_bitmask="default", 
                     quality_masks=[], bin_time=None, period=None, 

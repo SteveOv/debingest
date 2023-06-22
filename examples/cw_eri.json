@@ -1,5 +1,7 @@
 {
     "target": "CW Eri",
+    "sys_name": "CW Eridani",
+    "prefix": "cw_eri",
     "sectors": [
         4,
         31

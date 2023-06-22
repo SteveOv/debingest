@@ -27,7 +27,9 @@ $ python3 ingest.py -t 'CW Eri' -s 4 -fl sap_flux -q hard -b 240 -p 2.73 -qm 584
 ```
 where
 - `-t`/`--target`: required MAST identifier for the target system to process
-- `-sys`/`--sys-name`: optional name of the system (useful if target is an Id)
+- `-sys`/`--sys-name`: optional system name for labels (defaults to --target)
+- `-pr`/`--prefix`: optional prefix for output files (defaults to --sys-name)
+- `-o`/`--output-dir`: optional output location (defaults to staging/--prefix)
 - `-s`/`--sector`: an optional sector to find - finds all if omitted
 - `-fl`/`--flux`: the flux data column to use: **sap_flux** or pdcsap_flux
 - `-e`/`--exptime`: optionally filter on exposure time: long, short or fast
@@ -44,8 +46,9 @@ where
   - trim masks are applied last thing before writting JKTEBOP in & dat files
 
 The `-sys` or `--sys-name` argument will be set to the same value as the target
-if no value given. It is used for the file and directory name for the output 
-files, with spaces replaced with underscores, and for the title of any plots.
+if no value given. It is used in plot labels and titles and for the file prefix
+& output directory (unless overriden with values given for `--prefix` or 
+`--output-dir`).
 
 The `-s` or `--sector` argument may be given multiple times, once for each 
 sector required.  If there are no `-s` arguments then all available sectors
