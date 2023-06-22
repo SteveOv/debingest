@@ -1,5 +1,7 @@
 # debingest
 
+## Branch for the move to JSON only ingest config (remove cmd line ingest)
+
 ## Detached Eclipsing Binary Light-curve ingest pipeline
 
 This code base was developed in VSCode (on Ubuntu 22.04) within and an 
