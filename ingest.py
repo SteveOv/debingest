@@ -184,13 +184,15 @@ for lc in lcs:
     # the parameters for JKTEBOP. Need the mag data for LCs in 
     # shape[#LCs, 1024, 1] giving predictions with shape[#LCs, #features]
     print(f"Estimating system parameters.")
-    predictions = model.predict(np.array([np.transpose([mags])]), verbose=0)
-    (rA_plus_rB, k, bA, inc, ecosw, esinw, J, L3) = predictions[0, :]
+    preds = model.predict(np.array([np.transpose([mags])]), verbose=0)
 
     # The directly predicted inc needs scaling up
-    inc *= 100
-    inc_calc = utility.calculate_inclination(bA, rA_plus_rB, k, ecosw, esinw)
-    print(f"Inclination {inc:.6f} (prediction), {inc_calc:.6f} (calculation).")
+    PRED_TOKENS = ["rA_plus_rB", "k", "bA", "inc", "ecosw", "esinw", "J", "L3"]
+    predictions = {k: np.round(v, 6) for k, v in zip(PRED_TOKENS, preds[0, :])}
+    predictions["inc"] = np.round(predictions["inc"] * 100, 4)
+
+    inc_calc = np.round(utility.calculate_inc(*preds[0, [2, 0, 1, 4, 5]]), 4)
+    print(f"\tInclination: {predictions['inc']} (pred) vs {inc_calc} (calc).")
 
 
     # ---------------------------------------------------------------------
@@ -221,14 +223,7 @@ for lc in lcs:
     # ---------------------------------------------------------------------
     overrides = config.fitting_params or {}
     params = {
-        "rA_plus_rB": rA_plus_rB,
-        "k": k,
-        "inc": inc,
         "qphot": 0.,
-        "esinw": esinw,
-        "ecosw": ecosw,
-        "J": J,
-        "L3": L3,
         "L3_fit": 1,
         "LD_A": "quad",
         "LD_B": "quad",
@@ -244,7 +239,7 @@ for lc in lcs:
         "reflB": 0.,
         "period": period.to(u.d).value,
         "primary_epoch": primary_epoch.jd - 2.4e6,
-
+        **predictions,
         **overrides
     }
 

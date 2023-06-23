@@ -128,11 +128,11 @@ def echo_ingest_config(config: Union[Namespace, SimpleNamespace, dict],
     return
 
 
-def calculate_inclination(bA: np.double,
-                          rA_plus_rB: np.double,
-                          k: np.double,
-                          ecosw: np.double,
-                          esinw: np.double) -> np.double:
+def calculate_inc(bA: np.double,
+                  rA_plus_rB: np.double,
+                  k: np.double,
+                  ecosw: np.double,
+                  esinw: np.double) -> np.double:
     """
     Calculate the orbital inclination from the impact parameter.
     In training the mae of bA is usually lower, so we'll use that.
