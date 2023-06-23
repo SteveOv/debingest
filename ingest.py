@@ -53,7 +53,7 @@ if results:
 
 # This will load the acquired data directly from the cache so we're not 
 # dependent on search/download above. Useful for testing/dev or if MAST down.
-#fits_files = sorted(staging_dir.rglob("tess*_lc.fits"))
+#fits_files = sorted(output_dir.rglob("tess*_lc.fits"))
 #lcs = LightCurveCollection([
 #    lk.read(f"{f}", 
 #            flux_column=config.flux_column, 
