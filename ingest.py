@@ -2,9 +2,7 @@
 from pathlib import Path
 import os
 import re
-import argparse
 import textwrap
-import json
 import numpy as np
 import astropy.units as u
 import lightkurve as lk
@@ -18,35 +16,25 @@ from library import lightcurves, plot, jktebop, utility
 # ---------------------------------------------------------------------
 # Handle setting up and interpreting the ingest target configuration
 # ---------------------------------------------------------------------
-ap = utility.set_up_argument_parser()
-args = ap.parse_args()
-if args.new_file is not None:
-    new_file = Path(args.new_file)
-    utility.save_new_ingest_json(new_file, args)
+args = utility.set_up_argument_parser().parse_args()
+if args.new_file:
+    utility.write_ingest_config(
+        args.new_file,
+        utility.new_ingest_config("New Sys", **{
+            "polies": { "term": "sf", "degree": 1, "gap_threshold": 0.5 },
+            "fitting_params": { "dummy_token": "dummy value" }
+        }))
     quit()
-elif args.file:
-    print(f"Configuring pipeline from {args.file} & any command line overrides")
-    # Read the JSON file and use it as the basis of our target config but with
-    # overrides from the command line to apply missing default values or 
-    # otherwise override where non-default values have been given.
-    with open(args.file, "r") as f:
-        file_args = json.load(f)
-        overrides = {k: v for k, v in vars(args).items() 
-                     if k not in file_args or ap.get_default(k) != v}
-        args = argparse.Namespace(**{**file_args, **overrides})
 else:
-    print(f"Configuring pipeline based on command line arguments")
+    config = utility.read_ingest_config(args.file)
 
-utility.echo_ingest_parameters(args)
 detrend_clip = 0.5
 ml_phase_bins = 1024
-sys_name = args.sys_name if args.sys_name else args.target
+sys_name = config.sys_name or config.target
 
 # Set up output locations and file prefixing (& make sure chars are safe subset)
-prefix = re.sub(r'[^\w\d-]', 
-                '_', 
-                args.prefix if args.prefix else sys_name.lower())
-output_dir = args.output_dir if args.output_dir else Path("./staging") / prefix
+prefix = re.sub(r'[^\w\d-]', '_', config.prefix or sys_name.lower())
+output_dir = Path(config.output_dir or f"./staging/{prefix}")
 output_dir.mkdir(parents=True, exist_ok=True)
 print(f"\nWill write files prefixed '{prefix}' to directory {output_dir}")
 
@@ -55,25 +43,25 @@ print(f"\nWill write files prefixed '{prefix}' to directory {output_dir}")
 # Use MAST to DL any timeseries/light-curves for the system/sector(s)
 # ---------------------------------------------------------------------
 lcs = LightCurveCollection([])
-results = lk.search_lightcurve(target=args.target, sector=args.sectors,
-                               mission=args.mission, author=args.author,
-                               exptime=args.exptime)
+results = lk.search_lightcurve(target=config.target, sector=config.sectors,
+                               mission="TESS", author="SPOC",
+                               exptime=config.exptime)
 if results:
     lcs = results.download_all(download_dir=f"{output_dir}", cache=True, 
-                               flux_column=args.flux_column, 
-                               quality_bitmask=args.quality_bitmask)
+                               flux_column=config.flux_column, 
+                               quality_bitmask=config.quality_bitmask)
 
 # This will load the acquired data directly from the cache so we're not 
 # dependent on search/download above. Useful for testing/dev or if MAST down.
-#fits_files = sorted(staging_dir.rglob("tess*_lc.fits"))
+#fits_files = sorted(output_dir.rglob("tess*_lc.fits"))
 #lcs = LightCurveCollection([
 #    lk.read(f"{f}", 
-#            flux_column=args.flux_column, 
-#            quality_bitmask=args.quality_bitmask) 
+#            flux_column=config.flux_column, 
+#            quality_bitmask=config.quality_bitmask) 
 #    for f in fits_files
 #])
 
-print(f"\nFound {len(lcs)} light-curves for {sys_name} sectors {lcs.sector}.")
+print(f"\nFound {len(lcs)} light-curve(s) for {sys_name} sectors {lcs.sector}.")
 if len(lcs):
     # TODO: Arrange a proper location from which to pick up the model.
     # Suppress annoying TF info messages
@@ -85,13 +73,12 @@ if len(lcs):
 # Process each of the system's light-curves in turn
 # ---------------------------------------------------------------------
 for lc in lcs:  
-    sector = f"{lc.meta['SECTOR']:0>4}"
-    tic = f"{lc.meta['OBJECT']}"
+    sector = lc.meta['SECTOR']
+    file_stem = f"{prefix}_s{sector:0>4}"
     int_time = (lc.meta["INT_TIME"] + lc.meta["READTIME"]) * u.min
-    file_stem = f"{prefix}_s{sector}"
 
-    narrative = f"Processing {len(lc)} row(s) of {args.flux_column} data "\
-        f"(meeting the quality bitmask of {args.quality_bitmask}) "\
+    narrative = f"Processing {len(lc)} row(s) of {config.flux_column} data "\
+        f"(meeting the quality bitmask of {config.quality_bitmask}) "\
         f"for {sys_name} ({lc.meta['OBJECT']}) sector {sector} "\
         f"(camera {lc.meta['CAMERA']}/CCD {lc.meta['CCD']}). This covers the "\
         f"period of {lc.meta['DATE-OBS']} to {lc.meta['DATE-END']} "\
@@ -110,9 +97,9 @@ for lc in lcs:
     filter_mask |= lc.flux < 0
     print(f"NaN/negative flux masks affect {sum(filter_mask.unmasked)} row(s).")
 
-    if args.quality_masks and len(args.quality_masks):
+    if config.quality_masks and len(config.quality_masks):
         print(f"Applying time range quality masks")
-        for qm in args.quality_masks:
+        for qm in config.quality_masks:
             filter_mask |= lightcurves.mask_from_time_range(lc, qm)
 
     lc = lc[~filter_mask]
@@ -123,8 +110,8 @@ for lc in lcs:
     # ---------------------------------------------------------------------
     # Optional binning of the light-curve
     # ---------------------------------------------------------------------
-    if args.bin_time and args.bin_time > 0:
-        bin_time = args.bin_time * u.s
+    if config.bin_time and config.bin_time > 0:
+        bin_time = config.bin_time * u.s
         if int_time.to(u.s) >= bin_time:
             print(f"Light-curve already in bins >= {bin_time}")
         else:
@@ -151,20 +138,20 @@ for lc in lcs:
     # ---------------------------------------------------------------------
     (primary_epoch, primary_epoch_ix) = lightcurves.find_primary_epoch(lc)
     print(f"The primary epoch for sector {sector} is at JD {primary_epoch.jd}")
-    if args.period is None:
+    if config.period:
+        period = config.period * u.d
+        print(f"An orbital period of {period} was specified by the user.")
+    else:
         period = lightcurves.find_period(lc, primary_epoch)
         print(f"No period specified. Found {period} based on eclipse timings.")
-    else:
-        period = args.period * u.d
-        print(f"An orbital period of {period} was specified by the user.")
 
 
     # ---------------------------------------------------------------------
     # Optionally plot the light-curve incl primary eclipse for diagnostics
     # ---------------------------------------------------------------------
-    if args.plot_lc:
+    if config.plot_lc:
         ax = plot.plot_light_curve_on_axes(
-            lc, title=f"{sys_name} sector {sector} light-curve")
+            lc, title=f"Light-curve of {sys_name} sector {sector}")
         primary_mag = lc["delta_mag"][primary_epoch_ix]
         ax.scatter([primary_epoch.value], [primary_mag.value], zorder=-10,
                    marker="x", s=64., lw=.5, c="k", label="primary eclipse")
@@ -182,9 +169,9 @@ for lc in lcs:
     # ---------------------------------------------------------------------
     # Optionally plot the folded LC overlaid with the interpolated one for diags
     # ---------------------------------------------------------------------
-    if args.plot_fold:
-        ax = plot.plot_folded_light_curve_on_axes(fold_lc, column = "delta_mag",
-                    title = f"Folded light-curve of {sys_name} sector {sector}")
+    if config.plot_fold:
+        ax = plot.plot_folded_light_curve_on_axes(
+            fold_lc, title=f"Folded light-curve of {sys_name} sector {sector}")
         ax.scatter(phases, mags, c="k", marker="+", 
                    s=8, alpha=.5, linewidth=.5, zorder=10)
         plt.savefig(output_dir / (file_stem + "_folded.png"), dpi=300)
@@ -197,51 +184,46 @@ for lc in lcs:
     # the parameters for JKTEBOP. Need the mag data for LCs in 
     # shape[#LCs, 1024, 1] giving predictions with shape[#LCs, #features]
     print(f"Estimating system parameters.")
-    predictions = model.predict(np.array([np.transpose([mags])]), verbose=0)
-    (rA_plus_rB, k, bA, inc, ecosw, esinw, J, L3) = predictions[0, :]
+    preds = model.predict(np.array([np.transpose([mags])]), verbose=0)
 
     # The directly predicted inc needs scaling up
-    inc *= 100
-    inc_calc = utility.calculate_inclination(bA, rA_plus_rB, k, ecosw, esinw)
-    print(f"Inclination {inc:.6f} (prediction), {inc_calc:.6f} (calculation).")
+    PRED_TOKENS = ["rA_plus_rB", "k", "bA", "inc", "ecosw", "esinw", "J", "L3"]
+    predictions = {k: np.round(v, 6) for k, v in zip(PRED_TOKENS, preds[0, :])}
+    predictions["inc"] = np.round(predictions["inc"] * 100, 4)
+
+    inc_calc = np.round(utility.calculate_inc(*preds[0, [2, 0, 1, 4, 5]]), 4)
+    print(f"\tInclination: {predictions['inc']} (pred) vs {inc_calc} (calc).")
 
 
     # ---------------------------------------------------------------------
     # Build polies before trimming so they're not affected by gaps from trimming
     # ---------------------------------------------------------------------    
-    poly_instructions = jktebop.build_polies_for_lc(lc, args.polies)
+    poly_instructions = jktebop.build_polies_for_lc(lc, config.polies)
 
 
     # ---------------------------------------------------------------------
     # Apply any user requests to trim the light-curves (for data reduction)
     # ---------------------------------------------------------------------
-    if args.trim_masks is not None and len(args.trim_masks) > 0:
+    if config.trim_masks and len(config.trim_masks) > 0:
         print(f"Applying requested trim masks to final light-curve")
         trim_mask = [False] * len(lc)
-        for tm in args.trim_masks:
+        for tm in config.trim_masks:
             trim_mask |= lightcurves.mask_from_time_range(lc, tm)
         lc = lc[~trim_mask]
         print(f"Trimming masks {sum(trim_mask)} row(s) leaving {len(lc)}.")
 
-        if args.plot_lc:
+        if config.plot_lc:
             ax = plot.plot_light_curve_on_axes(
-                    lc, title=f"Trimmed {sys_name} sector {sector} light-curve")
+                lc, title=f"Trimmed light-curve of {sys_name} sector {sector}")
             plt.savefig(output_dir / (file_stem + "_trimmed.png"), dpi=300)
 
 
     # ---------------------------------------------------------------------
     # Generate JKTEBOP .dat and .in file for task3.
     # ---------------------------------------------------------------------
-    overrides = args.fitting_params if args.fitting_params else {}
+    overrides = config.fitting_params or {}
     params = {
-        "rA_plus_rB": rA_plus_rB,
-        "k": k,
-        "inc": inc,
         "qphot": 0.,
-        "esinw": esinw,
-        "ecosw": ecosw,
-        "J": J,
-        "L3": L3,
         "L3_fit": 1,
         "LD_A": "quad",
         "LD_B": "quad",
@@ -257,7 +239,7 @@ for lc in lcs:
         "reflB": 0.,
         "period": period.to(u.d).value,
         "primary_epoch": primary_epoch.jd - 2.4e6,
-
+        **predictions,
         **overrides
     }
 
