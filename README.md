@@ -19,6 +19,9 @@ pipeline, with the following command;
 $ conda activate debingest
 ```
 
+The role of the pipeline is to prepare data for dEB analyis and fitting
+with [JKTEBOP](https://www.astro.keele.ac.uk/jkt/codes/jktebop.html).
+
 ## Command line Use
 The entry point for this pipeline is `ingest.py` with example usage shown 
 below. The first example shows running a target ingest based on the 
@@ -185,9 +188,20 @@ specified (they default to 'sf' and 1 if omitted).
 ```json
   "polies": [
     { "term": "sf", "degree": 1, "time_range": [58410.00, 58420.00] },
-    { "term": "sf", "degree": 1, "time_range": [58424.00, 58437.00] },
+    { "term": "sf", "degree": 1, "time_range": [58424.00, 58434.00] },
     { "term": "sf", "degree": 1, "gap_threshold": 0.5 }
   ]
+```
+
+The resulting poly instructions, to be written to the JTEBOP '.in' file, may
+look similar to those shown below. This shows the result of the two manual
+polies above.  In the absence of these, the auto-poly would generate a similar
+output but the date values would be automatically generated from detecting
+gaps in the data.
+
+```
+poly  sf  58415.00  0.0 0.0 0.0 0.0 0.0 0.0  1 1 0 0 0 0  58410.00 58420.00
+poly  sf  58429.00  0.0 0.0 0.0 0.0 0.0 0.0  1 1 0 0 0 0  58424.00 58434.00
 ```
 
 Poly configs are processed in order, with the supported pattern being zero or 
