@@ -13,7 +13,7 @@ open a Terminal, navigate to this directory and run the following command;
 $ conda env create -f environment.yml
 ```
 
-You will need to activate this environment, prior to running the ingest
+You will need to activate this environment, whenever you wish to use the ingest
 pipeline, with the following command;
 ```sh
 $ conda activate debingest
@@ -85,19 +85,26 @@ parameters, broadly listed in the order they are used.
 }
 ```
 
+Many of these configuration parameters are optional and may be removed or set
+to `null` if the default behaviour is required.
+
+The time values for `quality_mask`, `trim_mask`, or `polies` date ranges are 
+interpreted as BTJD (if < 40 000), reduced JD (< 2.4e6) or JD (>= 2.4e6) all 
+with the scale matching the corresponding light-curve.
+
 ## Processing and parameter usage
 This section describes the ingest pipelines processes and how the parameters
 shown above are used.
 
 The `target` is a compulsory search identifier suitable for locating your target
-in the MAST portal (object name or TIC Id are known to work). The `sys_name` is
+in the MAST portal (object name or TIC are known to work). The `sys_name` is
 an optional name for use in plots and diagnostics messages, which will default
 to the _target_ value if omitted.
 
 The optional `prefix` and `output_dir` values are used to identify where output 
 files are written and how they're named. The prefix is used as a prefix for all
 files. If omitted, the prefix will be derived from the _sys_name_ and the output
-dir will be 'staging/_prefix_/'.
+dir will be 'staging/`prefix`/'.
 
 **Search and download**
 The `target`, `sectors` and `exptime` are used when when querying MAST for 
@@ -106,8 +113,8 @@ assumed to be equivalent to 'any'. Suitable values for _exptime_ are long,
 short, fast or a numeric value in seconds, with 'short' being appropriate for 
 TESS's 120 s cadence light-curve data.  
 
-The `flux_column` may be set to **sap_flux** or pdcsap_flux to indicate
-the source of the flux data to be used.
+The `flux_column` may be set to **sap_flux** (the default value) or pdcsap_flux 
+to indicate the source of the flux data to be used.
 
 > The ingest pipeline makes extensive use of the Lightkurve library. For more
 > information on the _target_, _sectors_, _exptime_, *flux_column* and 
@@ -122,13 +129,14 @@ against the light-curves' QUALITY flag. The *quality_masks* are time ranges
 (from, to) over which all data will be masked from subsequent processing.
 
 > The *quality_masks* and *trim_masks* both take zero or more two element 
-> arrays, each giving the start and end of a time range (i.e.: the following
-> defines two ranges, from JD 2451005 to 2451007 and 2451020 to 2451022 
-> inclusive `[[51005.0, 51007.0], [51020.0, 51022.0]]`)
+> arrays, each giving the start and end of a time range. For example, the 
+> following defines a pair of ranges from JD 2451005 to 2451007 and 2451020 to 
+> 2451022 (inclusive): `[[51005.0, 51007.0], [51020.0, 51022.0]]`
 
 The optional `bin_time` parameter may be set to a time value (in seconds) to 
 which the light-curve data will be (re)binned. This will be ignored if not set 
-or it is given a value which is <= the _exptime_ of the data as it is. 
+or it is given a value which is less than or equal to the _exptime_ of the data 
+as it is. 
 
 Once each light-curves is downloaded, opened, masked and optionally binned the
 fluxes are detrended and used to derive relative magnitudes.
@@ -151,12 +159,12 @@ of the folded light-curve, overlaid with the model, is plotted to a png file.
 **System parameter estimation**
 The reduced folded light-curve is passed to a Machine-Learning model, trained 
 to characterize folded dEB light-curves, for parameter estimation. This 
-gives us estimates the following fitting parameters for each light-curve:
+gives us estimates of the following fitting parameters for each light-curve:
 - `rA_plus_rB` (sum of the relative radii)
 - `k` (ratio of the relative radii)
 - `bA` (primary impact parameter)
 - `inc` (orbital inclination)
-- `ecosw` and `esinw` (eccentrity and argument of periastron)
+- `ecosw` and `esinw` (combined eccentrity and argument of periastron)
 - `J` (surface brightness ratio)
 - `L3` (amount of third light)
 
