@@ -147,10 +147,9 @@ def new_sector_state(sector: int,
         "file_stem": file_stem,
         "lc": lc,
         "fold_mags": None,
-        "prim_epoch": None,
-        "prim_epoch_ix": None,
+        "primary_epoch": None,
         "period": None,
-        "predictions": None,
+        "prediction": {},
         **kwargs
     })
 
