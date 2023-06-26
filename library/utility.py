@@ -1,7 +1,7 @@
 """
 General utility functions not covered elsewhere.
 """
-from typing import Union
+from typing import Union, List
 from pathlib import Path
 from argparse import Namespace, ArgumentParser
 from types import SimpleNamespace
@@ -125,7 +125,25 @@ def echo_ingest_config(config: Union[Namespace, SimpleNamespace, dict],
     print("The ingest configuration is:")
     for k, v in config.items():
         if show_nones or v:
-            print(f"\t{k} = {v}")
+            print(f"{k:>18s} : {v}")
+    return
+
+
+def echo_predictions(predict: dict, 
+                     stat: List[float], 
+                     pred_head: str = "Value",
+                     stat_head: str = "Stat"):
+    """
+    Will echo the passed prediction dictionary and accompanying statistic array.
+
+    :predict: the dictionary of predictions
+    :stat: an accompanying statistic array, i.e.: std dev to go with means
+    :pred_head: the heading to give the predicted values column
+    :stat_head: the heading to give the stat column
+    """
+    print(f"{'Predictions':>18} :  {pred_head:^10s} ( {stat_head:^10s})")
+    for (k, v), s in zip(predict.items(), stat):
+        print(f"{k:>18s} : {v:10.6f}  ({s:10.6f} )")
     return
 
 
@@ -149,7 +167,6 @@ def new_sector_state(sector: int,
         "fold_mags": None,
         "primary_epoch": None,
         "period": None,
-        "prediction": {},
         **kwargs
     })
 

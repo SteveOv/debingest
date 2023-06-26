@@ -182,13 +182,13 @@ model = load_model("./cnn_model.h5")        # TODO: need proper source location
 # and it will provide predictions with shape[#LCs, #features]
 FEATURE_TOKENS = ["rA_plus_rB", "k", "bA", "inc", "ecosw", "esinw", "J", "L3"]
 preds = model.predict(np.array([ss.fold_mags[:, np.newaxis] for ss in states]))
-for ss, pred in zip(states, preds):
-    # The directly predicted inc needs scaling up
-    ss.prediction = {k: np.round(v, 6) for k, v in zip(FEATURE_TOKENS, pred)}
-    ss.prediction["inc"] = np.round(ss.prediction["inc"] * 100, 4)
+preds[:, FEATURE_TOKENS.index("inc")] *= 100 # inc will be scaled down 0 to .9
+mean_preds = np.mean(preds, axis=0)
+predictions = {k: np.round(v, 6) for k, v in zip(FEATURE_TOKENS, mean_preds)}
+utility.echo_predictions(predictions, np.std(preds, axis=0), "Mean", "StdDev")
 
-    inc_calc = np.round(utility.calculate_inc(*pred[[2, 0, 1, 4, 5]]), 4)
-    print(f"\tInc: {ss.prediction['inc']} (pred) vs {inc_calc} (calc).")
+inc_calc = np.round(utility.calculate_inc(*mean_preds[[2, 0, 1, 4, 5]]), 6)
+print(f"{'inc (calculated)':>18s} : {inc_calc:10.6f}")
 
 
 # ---------------------------------------------------------------------
@@ -233,7 +233,7 @@ for ss in states:
         "reflB": 0.,
         "period": ss.period.to(u.d).value,
         "primary_epoch": ss.primary_epoch.jd - 2.4e6,
-        **ss.prediction,
+        **predictions,
         **overrides
     }
 
