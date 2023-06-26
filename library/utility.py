@@ -7,6 +7,7 @@ from argparse import Namespace, ArgumentParser
 from types import SimpleNamespace
 import json
 import numpy as np
+from lightkurve import LightCurve 
 
 
 def set_up_argument_parser() -> ArgumentParser:
@@ -126,6 +127,31 @@ def echo_ingest_config(config: Union[Namespace, SimpleNamespace, dict],
         if show_nones or v:
             print(f"\t{k} = {v}")
     return
+
+
+def new_sector_state(sector: int,
+                     file_stem: str,
+                     lc: LightCurve,
+                     **kwargs) -> Namespace:
+    """
+    Creates a new sector state instance. This will store the ongoing state of
+    the sector as it is passes along the pipeline.
+
+    :sector: the sector number
+    :file_stem: the stem name of any files to be generated from this sector
+    :lc: the light-curve data for this sector
+    :**kwags: anything else to be stored for this sector
+    """
+    return Namespace(**{
+        "sector": sector,
+        "file_stem": file_stem,
+        "lc": lc,
+        "fold_mags": None,
+        "primary_epoch": None,
+        "period": None,
+        "prediction": {},
+        **kwargs
+    })
 
 
 def calculate_inc(bA: np.double,
