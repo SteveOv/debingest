@@ -63,15 +63,8 @@ if results:
 #])
 
 print(f"\nFound {len(dlcs)} light-curves for {sys_name} sectors {dlcs.sector}.")
-if len(dlcs):
-    # TODO: Arrange a proper location from which to pick up the model.
-    # Suppress annoying TF info messages
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
-    model = load_model("./cnn_model.h5")
+ps = []     # This is where we populate our ongoing pipeline state
 
-
-# This is where we populate our ongoig pipeline state
-ps = []
 
 # ---------------------------------------------------------------------
 # Load LC, apply quality masks, optional binning, detrend and derive mags
@@ -185,19 +178,20 @@ for psd in ps:
 # Use the ML model to estimate system parameters
 # ---------------------------------------------------------------------
 print(f"\nEstimating system parameters") 
-for psd in ps:
-    # Now we can invoke the ML model to interpret the folded data & estimate
-    # the parameters for JKTEBOP. Need the mag data for LCs in 
-    # shape[#LCs, 1024, 1] giving predictions with shape[#LCs, #features]
-    preds = model.predict(np.array([np.transpose([psd.fold_mags])]), verbose=0)
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"    # Suppress annoying TF info messages
+model = load_model("./cnn_model.h5")        # TODO: need proper source location
+
+# The ML model expects the mag data in shape[#LCs, 1024, 1] 
+# and it will provide predictions with shape[#LCs, #features]
+FEATURE_TOKENS = ["rA_plus_rB", "k", "bA", "inc", "ecosw", "esinw", "J", "L3"]
+for preds in model.predict(np.array([p.fold_mags[:, np.newaxis] for p in ps])):
+    predictions = {k: np.round(v, 6) for k, v in zip(FEATURE_TOKENS, preds)}
 
     # The directly predicted inc needs scaling up
-    PRED_TOKENS = ["rA_plus_rB", "k", "bA", "inc", "ecosw", "esinw", "J", "L3"]
-    predictions = {k: np.round(v, 6) for k, v in zip(PRED_TOKENS, preds[0, :])}
     predictions["inc"] = np.round(predictions["inc"] * 100, 4)
     psd.preductions = predictions
 
-    inc_calc = np.round(utility.calculate_inc(*preds[0, [2, 0, 1, 4, 5]]), 4)
+    inc_calc = np.round(utility.calculate_inc(*preds[[2, 0, 1, 4, 5]]), 4)
     print(f"\tInclination: {predictions['inc']} (pred) vs {inc_calc} (calc).")
 
 
