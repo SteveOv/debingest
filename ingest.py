@@ -143,7 +143,7 @@ for psd in ps:
         psd.period = config.period * u.d
         print(f"An orbital period of {psd.period} was specified by the user.")
     else:
-        psd.period = lightcurves.find_period(lc, psd.prim_epoch)
+        psd.period = lightcurves.find_period(psd.lc, psd.prim_epoch)
         print(f"No period specified. Found {psd.period} from eclipse timings.")
 
     # Optionally plot the light-curve incl primary eclipse for diagnostics
@@ -162,7 +162,7 @@ for psd in ps:
 print(f"\nPhase folding LCs in preparation for parameter estimation")
 for psd in ps:
     print(f"Folding sector {psd.sector} light-curve.")
-    flc = lightcurves.phase_fold_lc(lc, psd.prim_epoch, psd.period, 0.75)
+    flc = lightcurves.phase_fold_lc(psd.lc, psd.prim_epoch, psd.period, 0.75)
     phase, psd.fold_mags = lightcurves.get_reduced_folded_lc(flc, ml_phase_bins)
 
     # Optionally plot the folded LC overlaid with the interpolated one for diags
@@ -184,15 +184,14 @@ model = load_model("./cnn_model.h5")        # TODO: need proper source location
 # The ML model expects the mag data in shape[#LCs, 1024, 1] 
 # and it will provide predictions with shape[#LCs, #features]
 FEATURE_TOKENS = ["rA_plus_rB", "k", "bA", "inc", "ecosw", "esinw", "J", "L3"]
-for preds in model.predict(np.array([p.fold_mags[:, np.newaxis] for p in ps])):
-    predictions = {k: np.round(v, 6) for k, v in zip(FEATURE_TOKENS, preds)}
-
+all_preds = model.predict(np.array([p.fold_mags[:, np.newaxis] for p in ps]))
+for psd, preds in zip(ps, all_preds):
     # The directly predicted inc needs scaling up
-    predictions["inc"] = np.round(predictions["inc"] * 100, 4)
-    psd.preductions = predictions
+    psd.predictions = {k: np.round(v, 6) for k, v in zip(FEATURE_TOKENS, preds)}
+    psd.predictions["inc"] = np.round(psd.predictions["inc"] * 100, 4)
 
     inc_calc = np.round(utility.calculate_inc(*preds[[2, 0, 1, 4, 5]]), 4)
-    print(f"\tInclination: {predictions['inc']} (pred) vs {inc_calc} (calc).")
+    print(f"\tInc: {psd.predictions['inc']} (pred) vs {inc_calc} (calc).")
 
 
 # ---------------------------------------------------------------------
@@ -237,11 +236,11 @@ for psd in ps:
         "reflB": 0.,
         "period": psd.period.to(u.d).value,
         "primary_epoch": psd.prim_epoch.jd - 2.4e6,
-        **predictions,
+        **psd.predictions,
         **overrides
     }
 
     # Generate JKTEBOP .dat and .in file for task3.
     jktebop.write_task3_in_file(output_dir / f"{psd.file_stem}.in", 
                                 poly_instructions, **params)
-    jktebop.write_data_to_dat_file(lc, output_dir / f"{psd.file_stem}.dat")
+    jktebop.write_data_to_dat_file(psd.lc, output_dir / f"{psd.file_stem}.dat")
