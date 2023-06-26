@@ -4,7 +4,6 @@ import os
 import re
 import textwrap
 import numpy as np
-from argparse import Namespace
 import astropy.units as u
 import lightkurve as lk
 from lightkurve import LightCurveCollection
@@ -119,17 +118,11 @@ for lc in dlcs:
                                                   res_sigma_clip=detrend_clip, 
                                                   reset_const_coeff=False)
 
-    # Store reduced LC for the next step
-    ps.append(Namespace(**{
-        "sector": lc.meta['SECTOR'],
-        "file_stem": file_stem,
-        "lc": lc["time", "flux", "flux_err", "delta_mag", "delta_mag_err"],
-        "fold_mags": None,
-        "prim_epoch": None,
-        "prim_epoch_ix": None,
-        "period": None,
-        "predictions": None
-    }))
+    # Set up the pipeline state for this sector going forward
+    ps.append(utility.new_sector_state(
+        lc.meta['SECTOR'], 
+        file_stem, 
+        lc["time", "flux", "flux_err", "delta_mag", "delta_mag_err"]))
     
 
 # ---------------------------------------------------------------------
