@@ -96,12 +96,13 @@ interpreted as BTJD (if < 40 000), reduced JD (< 2.4e6) or JD (>= 2.4e6) all
 with the scale matching the corresponding light-curve.
 
 ## Processing and parameter usage
-This section describes the ingest pipelines processes and how the parameters
-shown above are used.
+This section describes the ingest pipelines stages and how the parameters
+shown above are used. Each major stage, 1 to 6, is applied to all of the 
+target's matching sectors/light-curves before moving on to the next stage.
 
 The `target` is a compulsory search identifier suitable for locating your target
 in the MAST portal (object name or TIC are known to work). The `sys_name` is
-an optional name for use in plots and diagnostics messages, which will default
+an optional name for use in plots and diagnostics messages which will default
 to the _target_ value if omitted.
 
 The optional `prefix` and `output_dir` values are used to identify where output 
@@ -109,7 +110,7 @@ files are written and how they're named. The prefix is used as a prefix for all
 files. If omitted, the prefix will be derived from the _sys_name_ and the output
 dir will be 'staging/`prefix`/'.
 
-**Search and download**
+### 1. Target search and asset download
 The `target`, `sectors` and `exptime` are used when when querying MAST for 
 available timeseries data assets.  Both are optional and if not given they are 
 assumed to be equivalent to 'any'. Suitable values for _exptime_ are long, 
@@ -124,14 +125,14 @@ to indicate the source of the flux data to be used.
 > *quality_bitmask* values see the Lightkurve search and download documentation 
 > [here](http://docs.lightkurve.org/reference/api/lightkurve.search_lightcurve.html)
 
-**Pre-processing data**
+### 2. Pre-processing data
 The optional `quality_bitmask` and `quality_masks` are used to mask out poor 
 quality data from a light-curve prior to processing. The *quality_bitmask* may
 be set to none, **default**, hard, hardest or a numeric bitmask to be applied 
 against the light-curves' QUALITY flag. The *quality_masks* are time ranges 
 (from, to) over which all data will be masked from subsequent processing.
 
-> The *quality_masks* and *trim_masks* both take zero or more two element 
+> The *quality_masks* and *trim_masks* both take zero or more two-item 
 > arrays, each giving the start and end of a time range. For example, the 
 > following defines a pair of ranges from JD 2451005 to 2451007 and 2451020 to 
 > 2451022 (inclusive): `[[51005.0, 51007.0], [51020.0, 51022.0]]`
@@ -139,30 +140,30 @@ against the light-curves' QUALITY flag. The *quality_masks* are time ranges
 The optional `bin_time` parameter may be set to a time value (in seconds) to 
 which the light-curve data will be (re)binned. This will be ignored if not set 
 or it is given a value which is less than or equal to the _exptime_ of the data 
-as it is. 
+as downloaded. 
 
-Once each light-curves is downloaded, opened, masked and optionally binned the
-fluxes are detrended and used to derive relative magnitudes.
+Now that each light-curve is downloaded, opened, masked and optionally binned
+the fluxes are detrended and used to derive relative magnitudes.
 
-**Finding an orbital ephemeris**
-We now have the light-curve data in a useable state for processing. First the 
+### 3. Finding an orbital ephemeris
+We now have the light-curves' data in a useable state for processing. First the 
 *primary_epoch* is located by selecting the 'most prominent' eclipse in the 
 light-curve. With the `period` (in days), this defines the dEB's ephemeris. The
 _period_ will be estimated using a periodogram of the light-curve if not given.  
 
-The `plot_lc` flag controls whether the light-curve, with *primary_epoch*
+The `plot_lc` flag controls whether each light-curve, with its *primary_epoch*
 highlighted, is plotted to a png file.
 
-**Phase folding the light-curve**
-The ephemeris is used to phase fold the light-curve data, and a 1024 point
-single phase reduced light-curve is derived for subsequent inspection for 
+### 4. Phase folding the light-curves
+The ephemeris is used to phase fold the light-curve data, and 1024 point
+single phase reduced light-curves are derived for subsequent inspection for 
 system parameter estimation. The `plot_fold` flag controls whether a plot
-of the folded light-curve, overlaid with the model, is plotted to a png file.
+of each folded light-curve, overlaid with the model, is plotted to a png file.
 
-**System parameter estimation**
-The reduced folded light-curve is passed to a Machine-Learning model, trained 
-to characterize folded dEB light-curves, for parameter estimation. This 
-gives us estimates of the following fitting parameters for each light-curve:
+### 5. System parameter estimation
+The reduced folded light-curves are passed to a Machine-Learning model, 
+trained to characterize folded dEB light-curves, for parameter estimation.
+This us gives estimates of the following fitting parameters:
 - `rA_plus_rB` (sum of the relative radii)
 - `k` (ratio of the relative radii)
 - `bA` (primary impact parameter)
@@ -171,7 +172,8 @@ gives us estimates of the following fitting parameters for each light-curve:
 - `J` (surface brightness ratio)
 - `L3` (amount of third light)
 
-**Generating JKTEBOP poly instructions**
+### 6. Creating JKTEBOP fitting files
+#### 6-1. Generating JKTEBOP poly instructions
 During fitting JKTEBOP may alter the light-curve data by fitting polynomials
 to chosen terms, given as `poly` instructions. Generally we instruct it to fit
 low order polynomials to the `sf` (scale factor) term to normalize the data. 
@@ -212,14 +214,14 @@ _auto-poly_ will be used only where no _manual polies_ were applied. The two
 types of poly config are mutually exclusive, triggering of one type for a given
 light-curve will cause those of the other type to be subsequently ignored. 
 
-**Trimming light-curves**
+#### 6-2. Trimming light-curves
 The optional `trim_masks` config parameter controls what data, if any, is now
-trimmed from the light-curve. Unlike *quality_masks* which are used to mask out 
+trimmed from the light-curves. Unlike *quality_masks* which are used to mask 
 poor quality data prior to processing, the *trim_masks* are applied towards
 the end of the pipeline to reduce the data passed on to JKTEBOP for fitting.
-If `plot_lc` is set the trimmed light-curve will be plotted to a png file.
+If `plot_lc` is set the trimmed light-curves will be plotted to png files.
 
-**Generation of JKTEBOP fitting files**
+#### 6-3. Writing the JKTEBOP .in/.dat files
 Finally the processed and reduced light-curve time and magnitude data is 
 written to a JKTEBOP compatible '.dat' file. The parameters for fitting these 
 data are built up from a set of default values and ephemeris, overlaid with the 
