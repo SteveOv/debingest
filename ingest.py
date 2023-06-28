@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import os
 import re
 import textwrap
 import numpy as np
@@ -8,9 +7,8 @@ import astropy.units as u
 import lightkurve as lk
 from lightkurve import LightCurveCollection
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import load_model
 
-from library import lightcurves, plot, jktebop, utility
+from library import lightcurves, plot, jktebop, utility, estimator
 
 
 # ---------------------------------------------------------------------
@@ -175,20 +173,16 @@ for ss in states:
 # Use the ML model to estimate system parameters
 # ---------------------------------------------------------------------
 print(f"\nEstimating system parameters") 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"    # Suppress annoying TF info messages
-model = load_model("./cnn_model.h5")        # TODO: need proper source location
+e = estimator.Estimator()
+df = e.predict(np.array([ss.fold_mags[:, np.newaxis] for ss in states]))
 
-# The ML model expects the mag data in shape[#LCs, 1024, 1] 
-# and it will provide predictions with shape[#LCs, #features]
-FEATURE_TOKENS = ["rA_plus_rB", "k", "bA", "inc", "ecosw", "esinw", "J", "L3"]
-preds = model.predict(np.array([ss.fold_mags[:, np.newaxis] for ss in states]))
-preds[:, FEATURE_TOKENS.index("inc")] *= 100 # inc will be scaled down 0 to .9
-mean_preds = np.mean(preds, axis=0)
-predictions = {k: np.round(v, 6) for k, v in zip(FEATURE_TOKENS, mean_preds)}
-utility.echo_predictions(predictions, np.std(preds, axis=0), "Mean", "StdDev")
+predictions = {k: np.round(df[k].mean(), 6) for k in df.columns}
+pred_stddevs = [df[k].std() for k in df.columns]
+utility.echo_predictions(predictions, pred_stddevs, "Mean", "StdDev")
 
-inc_calc = np.round(utility.calculate_inc(*mean_preds[[2, 0, 1, 4, 5]]), 6)
-print(f"{'inc (calculated)':>18s} : {inc_calc:10.6f}")
+# Calculate the inc from other features for comparison with prediction
+inc_calc = utility.calculate_inc(df.bA, df.rA_plus_rB, df.k, df.ecosw, df.esinw)
+print(f"{'inc (calculated)':>18s} : {inc_calc.mean():10.6f}")
 
 
 # ---------------------------------------------------------------------
