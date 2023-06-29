@@ -80,11 +80,18 @@ def write_task3_in_file(file_name: Path, append_lines: List[str]=[], **params):
     !params! a dictionary of param tokens/keys and values
     """
     with open(file_name, mode="w") as of:
+        print(f"Writing JKTEBOP task3 in file to '{file_name.name}'")
+
         with open(Path("./library/task3.in.template"), "r") as tpf:
             template = Template(tpf.read())
 
         if "file_name_stem" not in params:
             params["file_name_stem"] = file_name.stem
+
+        if "L3" in params and params['L3'] < 0.:
+            print(f"Negative L3 values are not supported for JKTEBOP in files."
+                  + f" Updating L3 from {params['L3']} to zero.")
+            params['L3'] = 0.
 
         # Will error if any expected tokens are not present.
         of.write(template.substitute(**params))
@@ -94,7 +101,6 @@ def write_task3_in_file(file_name: Path, append_lines: List[str]=[], **params):
             # Newline so we don't append directly onto current final line.
             of.write("\n")
             of.writelines(append_lines)
-        print(f"Writing JKTEBOP task3 in file to '{file_name.name}'")
     return
 
 
