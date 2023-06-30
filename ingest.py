@@ -17,7 +17,7 @@ from library import lightcurves, plot, jktebop, utility, estimator
 args = utility.set_up_argument_parser().parse_args()
 if args.new_file:
     utility.write_ingest_config(
-        args.new_file,
+        args.file,
         utility.new_ingest_config("New Sys", **{
             "polies": { "term": "sf", "degree": 1, "gap_threshold": 0.5 },
             "fitting_params": { "dummy_token": "dummy value" }

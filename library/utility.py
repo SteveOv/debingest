@@ -28,16 +28,13 @@ relative magnitudes being written to a text dat file and the primary \
 epoch, period and estimated parameters used to create the in file which \
 contains the JKTEBOP processing parameters and instructions.")
 
-    group = ap.add_mutually_exclusive_group(required=True)
-    group.add_argument("-f", "--file", type=Path, dest="file",
-                    help="JSON file holding a target's ingest configuration")
-    group.add_argument("-n", "--new-file", type=str, dest="new_file",
-                    help="name of the new JSON configuration file to generate")
-
-    ap.set_defaults(file=None, new_file=None)
-    
-    # a bit naughty as _optionals is private, but this is a useful clarification
-    ap._optionals.title += " (you must give one of -h, -f or -n)"
+    ap.add_argument(dest="file", type=Path, metavar="TARGET-JSON-FILE",
+                    help="the file which holds a target's ingest configuration")
+    ap.add_argument("-n", "--new-file", action='store_true', required=False,
+                    help="rather than processing the indicated file, ingest " \
+                        + "will (over)write it with a default configuration")
+ 
+    ap.set_defaults(file=None, new_file=False)
     return ap
 
 

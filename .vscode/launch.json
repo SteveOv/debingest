@@ -13,33 +13,14 @@
             "justMyCode": true
         },
         {
-            "name": "Python: ingest.py -t 'CW Eri'",
+            "name": "Python: ingest.py ./examples/cw_eri.json",
             "type": "python",
             "request": "launch",
             "program": "ingest.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--target", "CW Eri",
-                "--sector", "4",
-                "--sector", "31",
-                "--flux", "sap_flux", 
-                "--quality", "hardest", 
-                "--quality-mask", "58420.00", "58423.00",
-                "--plot-lc", 
-                "--plot-fold", 
-
-            ]
-        },
-        {
-            "name": "Python: ingest.py -f ./examples/cw_eri.json",
-            "type": "python",
-            "request": "launch",
-            "program": "ingest.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "args": [
-                "--file", "./examples/cw_eri.json"
+                "./examples/cw_eri.json"
             ]
         },
         {
@@ -50,29 +31,19 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--new-file", "./examples/a_sys.json"
+                "-n", 
+                "./examples/a_sys.json"
             ]
         },
         {
-            "name": "Python: ingest.py -n ./examples/a_sys.json [overrides]",
+            "name": "Python: ingest.py ./examples/a_sys.json [use new-file]",
             "type": "python",
             "request": "launch",
             "program": "ingest.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "-n", "./examples/a_sys.json", "-sys", "A Sys", "-s", "20", "-e", "short", "-q", "hardest", "-qm", "51000", "51010", "-b", "240", "-p", "2.8008", "-pf", "-pl", "-tm", "51011", "51013"
-            ]
-        },
-        {
-            "name": "Python: ingest.py -f ./examples/a_sys.json [use new-file]",
-            "type": "python",
-            "request": "launch",
-            "program": "ingest.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "args": [
-                "-f", "./examples/a_sys.json"
+                "./examples/a_sys.json"
             ]
         }
     ]
