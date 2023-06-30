@@ -28,7 +28,7 @@ below. The first example shows running a target ingest based on the
 configuration given in an existing config json file.
 
 ```sh
-$ python3 ingest.py -f examples/cw_eri.json
+$ python3 ingest.py examples/cw_eri.json
 ```
 
 This second example shows how to generate a new default ingest configuration
@@ -42,9 +42,8 @@ $ python3 ingest.py -n examples/new_sys.json
 > you remove the need to specify python3 whenever you run ingest.py.
 
 ## The ingest JSON file
-A target's ingest configuration is held in a json file and passed to ingest.py 
-with the `-f` or `--file` argument. An example is shown below with the 
-parameters, broadly listed in the order they are used.
+An example of a target's configuration json is shown below with the 
+parameters broadly listed in the order they are used.
 
 ```json
 {
