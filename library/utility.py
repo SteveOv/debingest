@@ -7,8 +7,9 @@ from argparse import Namespace, ArgumentParser
 from types import SimpleNamespace
 import json
 import numpy as np
-from lightkurve import LightCurve 
+from lightkurve import LightCurve
 
+# pylint: disable=invalid-name
 
 def set_up_argument_parser() -> ArgumentParser:
     """
@@ -33,7 +34,7 @@ contains the JKTEBOP processing parameters and instructions.")
     ap.add_argument("-n", "--new-file", action='store_true', required=False,
                     help="rather than processing the indicated file, ingest " \
                         + "will (over)write it with a default configuration")
- 
+
     ap.set_defaults(file=None, new_file=False)
     return ap
 
@@ -67,8 +68,8 @@ def new_ingest_config(target: str, **kwargs) -> Namespace:
     })
 
 
-def write_ingest_config(file_name: Path, 
-                        config: Union[Namespace, SimpleNamespace, dict], 
+def write_ingest_config(file_name: Path,
+                        config: Union[Namespace, SimpleNamespace, dict],
                         echo: bool = True):
     """
     Will save a new ingest json file to the indicated file_name. The file will
@@ -84,13 +85,12 @@ def write_ingest_config(file_name: Path,
     if echo:
         echo_ingest_config(config)
 
-    with open(file_name, "w") as f:
+    with open(file_name, "w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
         print(f"Ingest config written to {f.name}")
-    return
 
 
-def read_ingest_config(file_name: Path, 
+def read_ingest_config(file_name: Path,
                        echo: bool = True) -> Namespace:
     """
     Reads the ingest config from the passed file.
@@ -99,7 +99,7 @@ def read_ingest_config(file_name: Path,
     :echo: whether to echo the contents of the config to the terminal
     """
     print(f"Reading ingest config from {file_name}")
-    with open(file_name, "r") as f:
+    with open(file_name, "r", encoding="utf-8") as f:
         file_config = json.load(f)
 
     # We explicitly request target so we get a KeyError if not present
@@ -116,18 +116,17 @@ def echo_ingest_config(config: Union[Namespace, SimpleNamespace, dict],
     Will echo any members of the config except those of value of None
     (unless :show_nones: is true).
     """
-    if isinstance(config, Namespace) or isinstance(config, SimpleNamespace):
+    if isinstance(config, (Namespace, SimpleNamespace)):
         config = vars(config)
 
     print("The ingest configuration is:")
     for k, v in config.items():
         if show_nones or v:
             print(f"{k:>18s} : {v}")
-    return
 
 
-def echo_predictions(predict: dict, 
-                     stat: List[float], 
+def echo_predictions(predict: dict,
+                     stat: List[float],
                      pred_head: str = "Value",
                      stat_head: str = "Stat"):
     """
@@ -141,7 +140,6 @@ def echo_predictions(predict: dict,
     print(f"{'Predictions':>18} :  {pred_head:^10s} ( {stat_head:^10s})")
     for (k, v), s in zip(predict.items(), stat):
         print(f"{k:>18s} : {v:10.6f}  ({s:10.6f} )")
-    return
 
 
 def new_sector_state(sector: int,
@@ -181,7 +179,7 @@ def calculate_inc(bA: np.double,
     rA = np.divide(rA_plus_rB, np.add(1, k))
     omega = np.arctan(np.divide(ecosw, esinw))
     e = np.divide(ecosw, np.cos(omega))
-    cosi = np.multiply(np.multiply(rA, bA), 
-                       np.divide(np.add(1, esinw), 
+    cosi = np.multiply(np.multiply(rA, bA),
+                       np.divide(np.add(1, esinw),
                                  np.subtract(1, np.power(e, 2))))
     return np.rad2deg(np.arccos(cosi))

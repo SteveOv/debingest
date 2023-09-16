@@ -6,8 +6,10 @@ from matplotlib.axes import Axes
 import astropy.units as u
 from lightkurve import LightCurve, FoldedLightCurve
 
+# pylint: disable=invalid-name
+# pylint: disable=too-many-arguments
 
-def plot_light_curve_on_axes(lc: LightCurve, 
+def plot_light_curve_on_axes(lc: LightCurve,
                              ax: Axes = None,
                              title: str = None,
                              column: str = "delta_mag",
@@ -30,7 +32,7 @@ def plot_light_curve_on_axes(lc: LightCurve,
         ax.invert_yaxis()
         ax.set_ylabel(
             f"{'Relative m' if 'delta' in column else 'M'}agnitude [mag]")
-        
+
     ax.minorticks_on()
     ax.tick_params(axis="both", which="both", direction="in",
                    bottom=True, top=True, left=True, right=True)
@@ -38,7 +40,7 @@ def plot_light_curve_on_axes(lc: LightCurve,
     return ax
 
 
-def plot_folded_light_curve_on_axes(flc: FoldedLightCurve, 
+def plot_folded_light_curve_on_axes(flc: FoldedLightCurve,
                                     ax: Axes = None,
                                     title: str = None,
                                     column: str = "delta_mag",
@@ -64,7 +66,7 @@ def plot_folded_light_curve_on_axes(flc: FoldedLightCurve,
             f"{'Relative m' if 'delta' in column else 'M'}agnitude [mag]")
 
     ax.minorticks_on()
-    ax.tick_params(axis="both", which="both", direction="in", 
+    ax.tick_params(axis="both", which="both", direction="in",
                    bottom=True, top=True, left=True, right=True)
     ax.set_title(title)
     return ax

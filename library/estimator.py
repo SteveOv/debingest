@@ -1,3 +1,6 @@
+"""
+A fitting params estimator specific to the ML model used for predictions.
+"""
 import os
 from pathlib import Path
 from inspect import getsourcefile
@@ -22,13 +25,16 @@ class Estimator():
         model_file = f"{this_dir}/cnn_model.h5"
         print(f"Estimator is loading model file {model_file}")
         self.model = load_model(model_file)
-    
+
     @property
     def __features_scale(self) -> list:
         return [1., 1., 1., 0.01, 1., 1., 1., 1.]
 
     @property
     def features(self) -> list:
+        """
+        The list of predicted features, in the order returned by the model.
+        """
         return ["rA_plus_rB", "k", "bA", "inc", "ecosw", "esinw", "J", "L3"]
 
     def predict(self, fold_mags: np.ndarray) -> DataFrame:

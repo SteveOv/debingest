@@ -7,55 +7,57 @@ from string import Template
 import numpy as np
 import astropy.units as u
 from astropy.time import Time, TimeDelta
-from astropy.io import ascii
+from astropy.io import ascii as io_ascii
 from lightkurve import LightCurve
 from library import lightcurves
 
-def write_data_to_dat_file(lc: LightCurve, 
+# pylint: disable=invalid-name
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-locals
+
+def write_data_to_dat_file(lc: LightCurve,
                            file_name: Path,
-                           column_names: List[str] \
-                            = ["time", "delta_mag", "delta_mag_err"],
-                           column_formats: List[Union[str, Callable]] \
-                            = [lambda t: f"{t.jd-2.4e6:.6f}", "%.6f", "%.6f"],
+                           column_names: List[str] = None,
+                           column_formats: List[Union[str, Callable]] = None,
                            overwrite: bool = True,
                            include_headers: bool = False,
                            comment_prefix: str = "# ",
-                           delimiter: str = "\t"): 
+                           delimiter: str = "\t"):
     """
     This will write the contents of the passed LightCurve columns to a
     JKTEBOP compatible delimited dat file.
 
-    !lc! the source LightCurve
+    :lc: the source LightCurve
 
-    !file_name! the name and location of the file to write
+    :file_name: the name and location of the file to write
 
-    !column_names! the names of the columns (in lc) to write
+    :column_names: the columns (in lc) to write (time, delta_mag, delta_mag_err)
 
-    !column_formats! the formats used to write the columns to file text
+    :column_formats: the formats used to write the columns to file text
 
-    !overwrite! whether to overwrite or append to the file
+    :overwrite: whether to overwrite or append to the file
 
-    !include_headers! whether to include a header row
+    :include_headers: whether to include a header row
     
-    !comment_prefix! prefix to use for comments/header row
+    :comment_prefix: prefix to use for comments/header row
 
-    !delimiter! the column delimiter to use 
+    :delimiter: the column delimiter to use 
     """
 
     # If these are not specified default to including all of them.
     if column_names is None:
-        column_names = lc.colnames
+        column_names = ["time", "delta_mag", "delta_mag_err"]
     if column_formats is None:
-        column_formats = ["%s"] * len(column_names)
+        column_formats = [lambda t: f"{t.jd-2.4e6:.6f}", "%.6f", "%.6f"]
 
     # Check and set up the formats.
     if len(column_names) != len(column_formats):
-        raise ValueError("Different number of column_names to column_formats." 
+        raise ValueError("Different number of column_names to column_formats."
                          + "Each column must have an equivalent format.")
 
     formats = dict(zip(column_names, column_formats))
     columns = [lc[column_name] for column_name in column_names]
-    format = "commented_header" if include_headers else "no_header"
+    fmt = "commented_header" if include_headers else "no_header"
 
     if len(column_names) <= 6:
         column_text = f"columns {column_names}"
@@ -63,33 +65,38 @@ def write_data_to_dat_file(lc: LightCurve,
         column_text = f"{len(column_names)} columns"
     print(f"Writing {len(lc)} rows(s) for {column_text} to '{file_name.name}'")
 
-    ascii.write(columns, output = file_name, format = format, 
-                names = column_names, formats = formats, 
-                comment = comment_prefix, delimiter = delimiter, 
-                overwrite = overwrite)
-    return
+    io_ascii.write(columns, output = file_name, format = fmt,
+                   names = column_names, formats = formats,
+                   comment = comment_prefix, delimiter = delimiter,
+                   overwrite = overwrite)
 
 
-def write_task3_in_file(file_name: Path, append_lines: List[str]=[], **params):
+def write_task3_in_file(file_name: Path,
+                        append_lines: List[str]=None,
+                        **params):
     """
     Writes a JKTEBOP task3 .in file based on applying the passed params/token
     values to the task3.in.template file.
 
-    !file_name! the name and path of the file to write
+    :file_name: the name and path of the file to write
 
-    !params! a dictionary of param tokens/keys and values
+    :append_lines: lines to optionally append at the end of the in file
+
+    :params: a dictionary of param tokens/keys and values
     """
-    with open(file_name, mode="w") as of:
+    with open(file_name, mode="w", encoding="utf8") as of:
         print(f"Writing JKTEBOP task3 in file to '{file_name.name}'")
 
-        with open(Path("./library/task3.in.template"), "r") as tpf:
+        with open(Path("./library/task3.in.template"),
+                  "r", 
+                  encoding="utf8") as tpf:
             template = Template(tpf.read())
 
         if "file_name_stem" not in params:
             params["file_name_stem"] = file_name.stem
 
         if "L3" in params and params['L3'] < 0.:
-            print(f"Negative L3 values are not supported for JKTEBOP in files."
+            print("Negative L3 values are not supported for JKTEBOP in files."
                   + f" Updating L3 from {params['L3']} to zero.")
             params['L3'] = 0.
 
@@ -101,10 +108,10 @@ def write_task3_in_file(file_name: Path, append_lines: List[str]=[], **params):
             # Newline so we don't append directly onto current final line.
             of.write("\n")
             of.writelines(append_lines)
-    return
 
 
-def build_polies_for_lc(lc: LightCurve, polies: List[dict] = None) -> List[str]:
+def build_polies_for_lc(lc: LightCurve,
+                        polies: List[dict] = None) -> List[str]:
     """
     Will build poly instruction lines for the passed light-curve based
     on the configuration in passed array of poly configuration items. There are
@@ -127,9 +134,9 @@ def build_polies_for_lc(lc: LightCurve, polies: List[dict] = None) -> List[str]:
 
     The defaults for a poly term, degree and gap_threshold are "sf", 1 & 0.5 (d) 
 
-    !lc! the source light-curve
+    :lc: the source light-curve
 
-    !polies! an array of poly configurations to be evaluated in order
+    :polies: an array of poly configurations to be evaluated in order
     """
     lines = []
 
@@ -147,9 +154,9 @@ def build_polies_for_lc(lc: LightCurve, polies: List[dict] = None) -> List[str]:
             # The two types of config are distinguished by the presence/absence
             # of a time_range. Either we have an excplicit time_range given...
             if "time_range" in poly:
-                if flags.get(term) != AUTO_POLY: 
+                if flags.get(term) != AUTO_POLY:
                     rng = lightcurves.to_time([
-                        np.min(poly["time_range"]), 
+                        np.min(poly["time_range"]),
                         np.max(poly["time_range"])
                     ], lc)
 
@@ -180,9 +187,9 @@ def build_polies_for_lc(lc: LightCurve, polies: List[dict] = None) -> List[str]:
                               + f"over JD {rng[0].jd:.2f} to {rng[1].jd:.2f} "\
                               + f"splitting on gaps > {thold} d.")
                 elif flags.get(term) == AUTO_POLY:
-                    print(f"Skipping auto poly - an auto poly already applied")
+                    print("Skipping auto poly - an auto poly already applied")
                 else:
-                    print(f"Skipping auto poly - manual poly already applied")
+                    print("Skipping auto poly - manual poly already applied")
     return lines
 
 
@@ -192,11 +199,11 @@ def build_poly_instr(time_range: Tuple[Time, Time],
     """
     Builds up and returns a JKTEBOP 'in' file fitted poly instruction
 
-    !time_range! the (from, to) range to fit it over - will pivot on the mean
+    :time_range: the (from, to) range to fit it over - will pivot on the mean
 
-    !term! the term to fit - defaults to sf
+    :term: the term to fit - defaults to sf
 
-    !degree! the degree of the polynomial to fit - defaults to 1 (linear)
+    :degree: the degree of the polynomial to fit - defaults to 1 (linear)
     """
     fit_flags = ' '.join(["1" if coef <= degree else "0" for coef in range(6)])
     time_from = np.min(time_range).jd - 2.4e6

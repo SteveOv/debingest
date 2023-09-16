@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Entry point for the ingest process."""
 from pathlib import Path
 import re
 import textwrap
@@ -26,8 +27,8 @@ if args.new_file:
 else:
     config = utility.read_ingest_config(args.file)
 
-detrend_clip = 0.5
-ml_phase_bins = 1024
+DETREND_CLIP = 0.5
+ML_PHASE_BINS = 1024
 sys_name = config.sys_name or config.target
 
 # Set up output locations and file prefixing (& make sure chars are safe subset)
@@ -45,17 +46,17 @@ results = lk.search_lightcurve(target=config.target, sector=config.sectors,
                                mission="TESS", author="SPOC",
                                exptime=config.exptime)
 if results:
-    lcs = results.download_all(download_dir=f"{output_dir}", cache=True, 
-                               flux_column=config.flux_column, 
+    lcs = results.download_all(download_dir=f"{output_dir}", cache=True,
+                               flux_column=config.flux_column,
                                quality_bitmask=config.quality_bitmask)
 
-# This will load the acquired data directly from the cache so we're not 
+# This will load the acquired data directly from the cache so we're not
 # dependent on search/download above. Useful for testing/dev or if MAST down.
 #fits_files = sorted(output_dir.rglob("tess*_lc.fits"))
 #lcs = LightCurveCollection([
-#    lk.read(f"{f}", 
-#            flux_column=config.flux_column, 
-#            quality_bitmask=config.quality_bitmask) 
+#    lk.read(f"{f}",
+#            flux_column=config.flux_column,
+#            quality_bitmask=config.quality_bitmask)
 #    for f in fits_files
 #])
 
@@ -66,8 +67,8 @@ states = []   # This is where we populate our ongoing pipeline state per sector
 # ---------------------------------------------------------------------
 # Load LC, apply quality masks, optional binning, detrend and derive mags
 # ---------------------------------------------------------------------
-print(f"Initial ingest, masking, binning and derivation of delta-mags")
-for lc in lcs:  
+print("Initial ingest, masking, binning and derivation of delta-mags")
+for lc in lcs:
     file_stem = f"{prefix}_s{lc.meta['SECTOR']:0>4}"
     int_time = (lc.meta["INT_TIME"] + lc.meta["READTIME"]) * u.min
 
@@ -80,7 +81,7 @@ for lc in lcs:
     print()
     print("\n".join(textwrap.wrap(narrative, 75)))
 
-    # We'll need to explicitly mask NaNs & negative fluxes as they may still be 
+    # We'll need to explicitly mask NaNs & negative fluxes as they may still be
     # present (only hardest seems to exclude them) and they'll break detrending.
     filter_mask = np.isnan(lc.flux)
     filter_mask |= lc.flux < 0
@@ -88,7 +89,7 @@ for lc in lcs:
 
     # Similarly, mask user defined ranges of suspect quality/abberations.
     if config.quality_masks and len(config.quality_masks):
-        print(f"Applying time range quality masks")
+        print("Applying time range quality masks")
         for qm in config.quality_masks:
             filter_mask |= lightcurves.mask_from_time_range(lc, qm)
 
@@ -108,29 +109,29 @@ for lc in lcs:
             print(f"After binning light-curve has {len(lc)} rows.")
 
     # Convert to relative mags with fitted polynomial detrending
-    print(f"Detrending & 'zeroing' magnitudes by subtracting polynomial.")
+    print("Detrending & 'zeroing' magnitudes by subtracting polynomial.")
     lightcurves.append_magnitude_columns(lc, "delta_mag", "delta_mag_err")
-    lc["delta_mag"] -= lightcurves.fit_polynomial(lc.time, 
-                                                  lc["delta_mag"], 
-                                                  degree=2, 
-                                                  res_sigma_clip=detrend_clip, 
+    lc["delta_mag"] -= lightcurves.fit_polynomial(lc.time,
+                                                  lc["delta_mag"],
+                                                  degree=2,
+                                                  res_sigma_clip=DETREND_CLIP,
                                                   reset_const_coeff=False)
 
     # Set up the pipeline state for this sector going forward
     states.append(utility.new_sector_state(
-        lc.meta['SECTOR'], 
-        file_stem, 
+        lc.meta['SECTOR'],
+        file_stem,
         lc["time", "flux", "flux_err", "delta_mag", "delta_mag_err"]))
 
-    # Clear these down as they should not be used beyond this block   
+    # Clear these down as they should not be used beyond this block
     del lc
-del lcs   
+del lcs
 
 
 # ---------------------------------------------------------------------
 # Find the ephemerides (& optionally plot the LCs)
 # ---------------------------------------------------------------------
-print(f"\nFinding orbital ephemerides")
+print("\nFinding orbital ephemerides")
 for ss in states:
     (ss.primary_epoch, pe_ix) = lightcurves.find_primary_epoch(ss.lc)
     print(f"The sector {ss.sector} primary epoch is JD {ss.primary_epoch.jd}")
@@ -143,7 +144,7 @@ for ss in states:
 
     # Optionally plot the light-curve incl primary eclipse for diagnostics
     if config.plot_lc:
-        ax = plot.plot_light_curve_on_axes(ss.lc, 
+        ax = plot.plot_light_curve_on_axes(ss.lc,
                     title=f"Light-curve of {sys_name} sector {ss.sector}")
         pe_mag = ss.lc["delta_mag"][pe_ix]
         ax.scatter([ss.primary_epoch.value], [pe_mag.value], zorder=-10,
@@ -154,17 +155,17 @@ for ss in states:
 # ---------------------------------------------------------------------
 # Phase fold the LC & interpolate on the fold to use for our estimates
 # ---------------------------------------------------------------------
-print(f"\nPhase folding LCs in preparation for parameter estimation")
+print("\nPhase folding LCs in preparation for parameter estimation")
 for ss in states:
     print(f"Folding sector {ss.sector} light-curve.")
     flc = lightcurves.phase_fold_lc(ss.lc, ss.primary_epoch, ss.period, 0.75)
-    phase, ss.fold_mags = lightcurves.get_reduced_folded_lc(flc, ml_phase_bins)
+    phase, ss.fold_mags = lightcurves.get_reduced_folded_lc(flc, ML_PHASE_BINS)
 
     # Optionally plot the folded LC overlaid with the interpolated one for diags
     if config.plot_fold:
-        ax = plot.plot_folded_light_curve_on_axes(flc, 
+        ax = plot.plot_folded_light_curve_on_axes(flc,
             title=f"Folded light-curve of {sys_name} sector {ss.sector}")
-        ax.scatter(phase, ss.fold_mags, c="k", marker="+", 
+        ax.scatter(phase, ss.fold_mags, c="k", marker="+",
                    s=8, alpha=.5, linewidth=.5, zorder=10)
         plt.savefig(output_dir / f"{ss.file_stem}_folded.png", dpi=300)
 
@@ -172,7 +173,7 @@ for ss in states:
 # ---------------------------------------------------------------------
 # Use the ML model to estimate system parameters
 # ---------------------------------------------------------------------
-print(f"\nEstimating system parameters") 
+print("\nEstimating system parameters")
 e = estimator.Estimator()
 df = e.predict(np.array([ss.fold_mags[:, np.newaxis] for ss in states]))
 
@@ -188,7 +189,7 @@ print(f"{'inc (calculated)':>18s} : {inc_calc.mean():10.6f}")
 # ---------------------------------------------------------------------
 # Prepare and output dat/in files for JKTEBOP
 # ---------------------------------------------------------------------
-print(f"\nWriting JKTEBOP fitting files to {output_dir.resolve()}")    
+print(f"\nWriting JKTEBOP fitting files to {output_dir.resolve()}")
 for ss in states:
 
     # Build polies before trimming so they're not affected by gaps from trimming
@@ -196,7 +197,7 @@ for ss in states:
 
     # Apply any user requests to trim the light-curves (for data reduction)
     if config.trim_masks and len(config.trim_masks) > 0:
-        print(f"Applying requested trim masks to final light-curve")
+        print("Applying requested trim masks to final light-curve")
         trim_mask = [False] * len(ss.lc)
         for tm in config.trim_masks:
             trim_mask |= lightcurves.mask_from_time_range(ss.lc, tm)
@@ -204,7 +205,7 @@ for ss in states:
         print(f"Trimming masks {sum(trim_mask)} row(s) leaving {len(ss.lc)}.")
 
         if config.plot_lc:
-            ax = plot.plot_light_curve_on_axes(ss.lc, 
+            ax = plot.plot_light_curve_on_axes(ss.lc,
                 title=f"Trimmed light-curve of {sys_name} sector {ss.sector}")
             plt.savefig(output_dir / f"{ss.file_stem}_trimmed.png", dpi=300)
 
@@ -232,6 +233,6 @@ for ss in states:
     }
 
     # Generate JKTEBOP .dat and .in file for task3.
-    jktebop.write_task3_in_file(output_dir / f"{ss.file_stem}.in", 
+    jktebop.write_task3_in_file(output_dir / f"{ss.file_stem}.in",
                                 poly_instructions, **params)
     jktebop.write_data_to_dat_file(ss.lc, output_dir / f"{ss.file_stem}.dat")
