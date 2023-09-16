@@ -1,0 +1,21 @@
+{
+  "target": "alf crb",
+  "sys_name": "Alpha CrB",
+  "sectors": [],
+  "flux_column": "sap_flux",
+  "exptime": null,
+  "quality_bitmask": "hard",
+  "quality_masks": [],
+  "bin_time": null,
+  "period": 17.35967,
+  "plot_lc": true,
+  "plot_fold": true,
+  "polies": {
+    "term": "sf",
+    "degree": 1,
+    "gap_threshold": 0.5
+  },
+  "trim_masks": [],
+  "fitting_params": {
+  }
+}
