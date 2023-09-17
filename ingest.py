@@ -119,6 +119,7 @@ for lc in lcs:
 
     # Set up the pipeline state for this sector going forward
     states.append(utility.new_sector_state(
+        sys_name,
         lc.meta['SECTOR'],
         file_stem,
         lc["time", "flux", "flux_err", "delta_mag", "delta_mag_err"]))
@@ -134,7 +135,7 @@ del lcs
 print("\nFinding orbital ephemerides")
 for ss in states:
     (ss.primary_epoch, pe_ix) = lightcurves.find_primary_epoch(ss.lc)
-    print(f"The sector {ss.sector} primary epoch is JD {ss.primary_epoch.jd}")
+    print(f"The {ss.name} sector {ss.sector} P.E. is JD {ss.primary_epoch.jd}")
     if config.period:
         ss.period = config.period * u.d
         print(f"An orbital period of {ss.period} was specified by the user.")
@@ -145,7 +146,7 @@ for ss in states:
     # Optionally plot the light-curve incl primary eclipse for diagnostics
     if config.plot_lc:
         ax = plot.plot_light_curve_on_axes(ss.lc,
-                    title=f"Light-curve of {sys_name} sector {ss.sector}")
+                    title=f"Light-curve of {ss.name} sector {ss.sector}")
         pe_mag = ss.lc["delta_mag"][pe_ix]
         ax.scatter([ss.primary_epoch.value], [pe_mag.value], zorder=-10,
                    marker="x", s=64., lw=.5, c="k", label="primary eclipse")
@@ -157,14 +158,14 @@ for ss in states:
 # ---------------------------------------------------------------------
 print("\nPhase folding LCs in preparation for parameter estimation")
 for ss in states:
-    print(f"Folding sector {ss.sector} light-curve.")
+    print(f"Folding {ss.name} sector {ss.sector} light-curve.")
     flc = lightcurves.phase_fold_lc(ss.lc, ss.primary_epoch, ss.period, 0.75)
     phase, ss.fold_mags = lightcurves.get_reduced_folded_lc(flc, ML_PHASE_BINS)
 
     # Optionally plot the folded LC overlaid with the interpolated one for diags
     if config.plot_fold:
         ax = plot.plot_folded_light_curve_on_axes(flc,
-            title=f"Folded light-curve of {sys_name} sector {ss.sector}")
+            title=f"Folded light-curve of {ss.name} sector {ss.sector}")
         ax.scatter(phase, ss.fold_mags, c="k", marker="+",
                    s=8, alpha=.5, linewidth=.5, zorder=10)
         plt.savefig(output_dir / f"{ss.file_stem}_folded.png", dpi=300)
@@ -175,15 +176,28 @@ for ss in states:
 # ---------------------------------------------------------------------
 print("\nEstimating system parameters")
 e = estimator.Estimator()
-df = e.predict(np.array([ss.fold_mags[:, np.newaxis] for ss in states]))
+df = e.predict(
+    np.array([ss.fold_mags[:, np.newaxis] for ss in states]),
+    include_sigmas=True)
 
-predictions = {k: np.round(df[k].mean(), 6) for k in df.columns}
-pred_stddevs = [df[k].std() for k in df.columns]
-utility.echo_predictions(predictions, pred_stddevs, "Mean", "StdDev")
+names = [n for n in df.columns if not n.endswith("_sigma")]
+for (ix, row), ss in zip(df.iterrows(), states):
+    # Print out each individual set of predictions
+    print(f"\nPredictions for light-curve of {ss.name} sector {ss.sector}")
+    utility.echo_predictions(
+        names,
+        [row[n] for n in names],
+        [row[f"{n}_sigma"] for n in names],
+        "Mean", "StdDev")
 
-# Calculate the inc from other features for comparison with prediction
-inc_calc = utility.calculate_inc(df.bA, df.rA_plus_rB, df.k, df.ecosw, df.esinw)
-print(f"{'inc (calculated)':>18s} : {inc_calc.mean():10.6f}")
+    # Now build the prediction dictionary
+    ss.predictions = {name: row[name] for name in names}
+
+    # Calculate the inc from other features for comparison with prediction
+    # Ignore any uncertainties as this is just for info
+    inc_calc = utility.calculate_inc(row.bA, row.rA_plus_rB,
+                                     row.k, row.ecosw, row.esinw)
+    print(f"{'inc (calculated)':>18s} : {inc_calc.mean():10.6f}")
 
 
 # ---------------------------------------------------------------------
@@ -206,7 +220,7 @@ for ss in states:
 
         if config.plot_lc:
             ax = plot.plot_light_curve_on_axes(ss.lc,
-                title=f"Trimmed light-curve of {sys_name} sector {ss.sector}")
+                 title=f"Trimmed light-curve of {ss.name} sector {ss.sector}")
             plt.savefig(output_dir / f"{ss.file_stem}_trimmed.png", dpi=300)
 
     # The final setting of fitting params: defaults <- predictions <- overrides
@@ -228,7 +242,7 @@ for ss in states:
         "reflB": 0.,
         "period": ss.period.to(u.d).value,
         "primary_epoch": ss.primary_epoch.jd - 2.4e6,
-        **predictions,
+        **ss.predictions,
         **overrides
     }
 

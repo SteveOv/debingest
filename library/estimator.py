@@ -44,11 +44,27 @@ class Estimator():
         :fold_mags: 1+ folded reduced light-curves in shape[#LCs, 1024, 1]
         :returns: pandas DataFrame with predicted features in columns
         """
-        # The predictions are give in shape[#LCs, #features]
         print(f"Making predictions for {fold_mags.shape[0]} light-curves")
 
-        # Undo any scaling of the features
-        preds = np.divide(self.model.predict(fold_mags), self.__features_scale)
+        # Make multiple predictions for each LC with training switched on
+        # so that each prediction is with a statistically unique "dropout"
+        # subset of the model's net - this is the MC Dropout algorithm.
+        # The predictions are give in shape[#iterations, #LCs, #features]
+        mc_preds = np.stack([
+            self.model(fold_mags, training=True)
+            for ix in np.arange(1000)
+        ])
+
+        preds = np.concatenate([
+            # Undo any scaling of the features
+            np.divide(np.mean(mc_preds, axis=0), self.__features_scale),
+            np.divide(np.std(mc_preds, axis=0), self.__features_scale)
+        ], axis=1)
+
+        col_names = np.concatenate([
+            self.features,
+            [f + "_sigma" for f in self.features]
+        ])
 
         # Load into a Pandas DataFrame
-        return DataFrame(data=preds, columns=self.features)
+        return DataFrame(data=preds, columns=col_names)

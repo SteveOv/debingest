@@ -125,24 +125,29 @@ def echo_ingest_config(config: Union[Namespace, SimpleNamespace, dict],
             print(f"{k:>18s} : {v}")
 
 
-def echo_predictions(predict: dict,
-                     stat: List[float],
+def echo_predictions(names: List[str],
+                     preds: List[float],
+                     stats: List[float],
                      pred_head: str = "Value",
                      stat_head: str = "Stat"):
     """
-    Will echo the passed prediction dictionary and accompanying statistic array.
+    Will echo the passed predicted values and accompanying statistic array.
 
-    :predict: the dictionary of predictions
-    :stat: an accompanying statistic array, i.e.: std dev to go with means
+    :names: the list of the predicted values
+    :preds: the list of predicted values
+    :stats: an accompanying statistic array, i.e.: std dev to go with means
     :pred_head: the heading to give the predicted values column
     :stat_head: the heading to give the stat column
     """
+    if not len(names) == len(preds) == len(stats):
+        raise ValueError("names, preds and stats must be the same size")
     print(f"{'Predictions':>18} :  {pred_head:^10s} ( {stat_head:^10s})")
-    for (k, v), s in zip(predict.items(), stat):
-        print(f"{k:>18s} : {v:10.6f}  ({s:10.6f} )")
+    for n, v, s in zip(names, preds, stats):
+        print(f"{n:>18s} : {v:10.6f}  ({s:10.6f} )")
 
 
-def new_sector_state(sector: int,
+def new_sector_state(name: str,
+                     sector: int,
                      file_stem: str,
                      lc: LightCurve,
                      **kwargs) -> Namespace:
@@ -150,18 +155,21 @@ def new_sector_state(sector: int,
     Creates a new sector state instance. This will store the ongoing state of
     the sector as it is passes along the pipeline.
 
+    :name: the system name
     :sector: the sector number
     :file_stem: the stem name of any files to be generated from this sector
     :lc: the light-curve data for this sector
     :**kwags: anything else to be stored for this sector
     """
     return Namespace(**{
+        "name": name,
         "sector": sector,
         "file_stem": file_stem,
         "lc": lc,
         "fold_mags": None,
         "primary_epoch": None,
         "period": None,
+        "predictions": None,
         **kwargs
     })
 
