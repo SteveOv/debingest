@@ -176,9 +176,7 @@ for ss in states:
 # ---------------------------------------------------------------------
 print("\nEstimating system parameters")
 e = estimator.Estimator()
-df = e.predict(
-    np.array([ss.fold_mags[:, np.newaxis] for ss in states]),
-    include_sigmas=True)
+df = e.predict(np.array([ss.fold_mags[:, np.newaxis] for ss in states]))
 
 names = [n for n in df.columns if not n.endswith("_sigma")]
 for (ix, row), ss in zip(df.iterrows(), states):

@@ -37,7 +37,7 @@ class Estimator():
         """
         return ["rA_plus_rB", "k", "bA", "inc", "ecosw", "esinw", "J", "L3"]
 
-    def predict(self, fold_mags: np.ndarray) -> DataFrame:
+    def predict(self, fold_mags: np.ndarray, iterations: int=1000) -> DataFrame:
         """
         Predicts the estimated values of the passed folds.
 
@@ -45,14 +45,15 @@ class Estimator():
         :returns: pandas DataFrame with predicted features in columns
         """
         print(f"Making predictions for {fold_mags.shape[0]} light-curves")
+        iterations = max(1, iterations)
 
         # Make multiple predictions for each LC with training switched on
         # so that each prediction is with a statistically unique "dropout"
         # subset of the model's net - this is the MC Dropout algorithm.
         # The predictions are give in shape[#iterations, #LCs, #features]
         mc_preds = np.stack([
-            self.model(fold_mags, training=True)
-            for ix in np.arange(1000)
+            self.model(fold_mags, training=not iterations == 1)
+            for ix in np.arange(iterations)
         ])
 
         preds = np.concatenate([
