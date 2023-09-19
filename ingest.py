@@ -178,24 +178,20 @@ print("\nEstimating system parameters")
 e = estimator.Estimator()
 df = e.predict(np.array([ss.fold_mags[:, np.newaxis] for ss in states]))
 
-names = [n for n in df.columns if not n.endswith("_sigma")]
+calc_names = utility.append_calculated_params(df)
+col_names = [n for n in df.columns if not n.endswith("_sigma")]
 for (ix, row), ss in zip(df.iterrows(), states):
     # Print out each individual set of predictions
     print(f"\nPredictions for light-curve of {ss.name} sector {ss.sector}")
     utility.echo_predictions(
-        names,
-        [row[n] for n in names],
-        [row[f"{n}_sigma"] for n in names],
+        col_names,
+        ["*" if n in calc_names else "" for n in col_names],
+        [row[n] for n in col_names],
+        [row[f"{n}_sigma"] for n in col_names],
         "Mean", "StdDev")
 
     # Now build the prediction dictionary
-    ss.predictions = {name: row[name] for name in names}
-
-    # Calculate the inc from other features for comparison with prediction
-    # Ignore any uncertainties as this is just for info
-    inc_calc = utility.calculate_inc(row.bA, row.rA_plus_rB,
-                                     row.k, row.ecosw, row.esinw)
-    print(f"{'inc (calculated)':>18s} : {inc_calc.mean():10.6f}")
+    ss.predictions = {name: row[name] for name in col_names}
 
 
 # ---------------------------------------------------------------------

@@ -8,6 +8,8 @@ from types import SimpleNamespace
 import json
 import numpy as np
 from lightkurve import LightCurve
+from pandas import DataFrame
+from library import uncertainty_math as um
 
 # pylint: disable=invalid-name
 
@@ -126,6 +128,7 @@ def echo_ingest_config(config: Union[Namespace, SimpleNamespace, dict],
 
 
 def echo_predictions(names: List[str],
+                     flags: List[str],
                      preds: List[float],
                      stats: List[float],
                      pred_head: str = "Value",
@@ -134,16 +137,17 @@ def echo_predictions(names: List[str],
     Will echo the passed predicted values and accompanying statistic array.
 
     :names: the list of the predicted values
+    :flags: single character flags to put next to the name
     :preds: the list of predicted values
     :stats: an accompanying statistic array, i.e.: std dev to go with means
     :pred_head: the heading to give the predicted values column
     :stat_head: the heading to give the stat column
     """
-    if not len(names) == len(preds) == len(stats):
-        raise ValueError("names, preds and stats must be the same size")
-    print(f"{'Predictions':>18} :  {pred_head:^10s} ( {stat_head:^10s})")
-    for n, v, s in zip(names, preds, stats):
-        print(f"{n:>18s} : {v:10.6f}  ({s:10.6f} )")
+    if not len(names) == len(flags) == len(preds) == len(stats):
+        raise ValueError("names, flags, preds and stats must be the same size")
+    print(f"{'Predictions':>18}   :  {pred_head:^10s} ( {stat_head:^10s})")
+    for n, f, v, s in zip(names, flags, preds, stats):
+        print(f"{n:>18s} {f:1s} : {v:10.6f}  ({s:10.6f} )")
 
 
 def new_sector_state(name: str,
@@ -191,3 +195,41 @@ def calculate_inc(bA: np.double,
                        np.divide(np.add(1, esinw),
                                  np.subtract(1, np.power(e, 2))))
     return np.rad2deg(np.arccos(cosi))
+
+
+def append_calculated_params(df: DataFrame):
+    """
+    Append calculated param columns to the prediction DataFrame.
+
+    :df: the pandas DataFrame to modify
+    :returns: list of the base column names appended
+    """
+    original_cols = df.columns.values
+
+    df["rA"], df["rA_sigma"] = \
+        um.divide(df.rA_plus_rB, df.rA_plus_rB_sigma,
+                  *um.add(1, 0, df.k, df.k_sigma))
+
+    df["omega"], df["omega_sigma"] = \
+        um.arctan(*um.divide(df.ecosw, df.ecosw_sigma,
+                             df.esinw, df.esinw_sigma))
+
+    df["e"], df["e_sigma"] = \
+        um.divide(df.ecosw, df.ecosw_sigma,
+                  *um.cos(df.omega, df.omega_sigma))
+
+    rAbA, rAbA_sigma = \
+        um.multiply(df.rA, df.rA_sigma, df.bA, df.bA_sigma)
+    one_plus_esinw, one_plus_esinw_sigma = \
+        um.add(1, 0, df.esinw, df.esinw_sigma)
+    one_minus_e_sqr, one_minus_e_sqr_sigma = \
+        um.subtract(1, 0, *um.power(df.e, df.e_sigma, 2, 0))
+    cos_i, cos_i_sigma = \
+        um.multiply(rAbA, rAbA_sigma,
+                    *um.divide(one_plus_esinw, one_plus_esinw_sigma,
+                               one_minus_e_sqr, one_minus_e_sqr_sigma))
+    df["inc_calc"], df["inc_calc_sigma"] = \
+        um.rad2deg(*um.arccos(cos_i, cos_i_sigma))
+
+    new_names = [n for n in df.columns.values if n not in original_cols]
+    return [n for n in new_names if not n.endswith("_sigma")]
