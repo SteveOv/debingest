@@ -8,7 +8,6 @@
     "quality_masks": [
         [58710.00, 58711.00]
     ],
-    "period": 2.29926,
     "polies": [
         { "term": "sf", "degree": 1, "gap_threshold": 0.5 }
     ],

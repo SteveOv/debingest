@@ -151,6 +151,7 @@ def echo_predictions(names: List[str],
 
 
 def new_sector_state(name: str,
+                     tic_id: int,
                      sector: int,
                      file_stem: str,
                      lc: LightCurve,
@@ -160,6 +161,7 @@ def new_sector_state(name: str,
     the sector as it is passes along the pipeline.
 
     :name: the system name
+    :tic_id: the TESS TIC identifier for this system
     :sector: the sector number
     :file_stem: the stem name of any files to be generated from this sector
     :lc: the light-curve data for this sector
@@ -167,6 +169,7 @@ def new_sector_state(name: str,
     """
     return Namespace(**{
         "name": name,
+        "tic_id": tic_id,
         "sector": sector,
         "file_stem": file_stem,
         "lc": lc,

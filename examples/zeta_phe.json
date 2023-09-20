@@ -7,7 +7,6 @@
     "quality_bitmask": "hardest",
     "quality_masks": [
     ],
-    "period": 1.66977,
     "polies": [
         { "term": "sf", "degree": 1, "gap_threshold": 0.5 }
     ],

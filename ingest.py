@@ -9,7 +9,7 @@ import lightkurve as lk
 from lightkurve import LightCurveCollection
 import matplotlib.pyplot as plt
 
-from library import lightcurves, plot, jktebop, utility, estimator
+from library import lightcurves, plot, jktebop, utility, estimator, catalogues
 
 
 # ---------------------------------------------------------------------
@@ -120,6 +120,7 @@ for lc in lcs:
     # Set up the pipeline state for this sector going forward
     states.append(utility.new_sector_state(
         sys_name,
+        lc.meta["TICID"],
         lc.meta['SECTOR'],
         file_stem,
         lc["time", "flux", "flux_err", "delta_mag", "delta_mag_err"]))
@@ -134,12 +135,20 @@ del lcs
 # ---------------------------------------------------------------------
 print("\nFinding orbital ephemerides")
 for ss in states:
+    # Attempt to look up ephemeris information from the TESS-eb catalogue
+    # For now, I'm not using their PE as I'm not sure what scale it's in
+    # so continuing to always use the PE derived from inspecting the LC peaks.
+    # Also could probably rework so we only do this once per target.
+    _, ss.period = catalogues.get_tess_ebs_ephemeris_for_tic(ss.tic_id)
+    if ss.period is not None:
+        print(f"Located period of {ss.period} in the TESS-ebs catalogue.")
     (ss.primary_epoch, pe_ix) = lightcurves.find_primary_epoch(ss.lc)
+
     print(f"The {ss.name} sector {ss.sector} P.E. is JD {ss.primary_epoch.jd}")
     if config.period:
         ss.period = config.period * u.d
         print(f"An orbital period of {ss.period} was specified by the user.")
-    else:
+    elif ss.period is None:
         ss.period = lightcurves.find_period(ss.lc, ss.primary_epoch)
         print(f"No period specified. Found {ss.period} from eclipse timings.")
 
