@@ -167,9 +167,17 @@ for ss in states:
 # ---------------------------------------------------------------------
 print("\nPhase folding LCs in preparation for parameter estimation")
 for ss in states:
-    print(f"Folding {ss.name} sector {ss.sector} light-curve.")
-    flc = lightcurves.phase_fold_lc(ss.lc, ss.primary_epoch, ss.period, 0.75)
-    phase, ss.fold_mags = lightcurves.get_reduced_folded_lc(flc, ML_PHASE_BINS)
+    # This value should reflect the training set the estimator was trained on.
+    # Set to 0.75 to shift phase 0 to 1/4 along x-axis. Set to 1 for no shift.
+    PHASE_PIVOT = 0.75
+    print(f"Folding {ss.name} sector {ss.sector} light-curve.",
+          f"Phase data beyond phase {PHASE_PIVOT} will be wrapped.")
+    flc = lightcurves.phase_fold_lc(
+                                ss.lc, ss.primary_epoch, ss.period, PHASE_PIVOT)
+    phase, ss.fold_mags = lightcurves.get_reduced_folded_lc(
+                                flc, ML_PHASE_BINS, PHASE_PIVOT)
+    print(f"Resampled fold over {ML_PHASE_BINS} phase bins",
+          f"from phase {np.min(phase)} to {np.max(phase)}")
 
     # Optionally plot the folded LC overlaid with the interpolated one for diags
     if config.plot_fold:

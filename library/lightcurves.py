@@ -223,7 +223,7 @@ def find_eclipses(lc: LightCurve, width: int = 5) -> Tuple[List[int], dict]:
 def phase_fold_lc(lc: LightCurve,
                   primary_epoch: Time,
                   period: u.Quantity,
-                  wrap_phase: float=0.75) -> FoldedLightCurve:
+                  phase_pivot: float=0.75) -> FoldedLightCurve:
     """
     Perform a normalized phase fold on the passed LightCurve. By default, the
     primary_epoch (phase 0) will rotated to the 0.25 position giving returned 
@@ -235,18 +235,19 @@ def phase_fold_lc(lc: LightCurve,
 
     :period: the period to fold on
 
-    :wrap_phase: the amout to wrap the fold to control where the primary appears
+    :phase_pivot: the pivot point above which to wrap phase round to < 0.
     """
-    if not isinstance(wrap_phase, u.Quantity):
-        wrap_phase = u.Quantity(wrap_phase)
+    if phase_pivot is not None and not isinstance(phase_pivot, u.Quantity):
+        phase_pivot = u.Quantity(phase_pivot)
     return lc.fold(period,
                    epoch_time=primary_epoch,
                    normalize_phase=True,
-                   wrap_phase=wrap_phase)
+                   wrap_phase=phase_pivot)
 
 
 def get_reduced_folded_lc(flc: FoldedLightCurve,
                           num_bins: int = 1024,
+                          phase_pivot: float=0.75,
                           flc_rollover: int = 200) \
                                 -> Tuple[u.Quantity, u.Quantity]:
     """
@@ -261,6 +262,8 @@ def get_reduced_folded_lc(flc: FoldedLightCurve,
     :flc: the source FoldedLightCurve
 
     :num_bins: the number of equally spaced rows to return
+
+    :phase_pivot: the pivot point about which the fold phase was wrapped to < 0.
 
     :flc_rollover: the number of row to extend the ends of the source phases by
 
@@ -278,9 +281,14 @@ def get_reduced_folded_lc(flc: FoldedLightCurve,
         flc["delta_mag"][:flc_rollover]
     ])
 
-    min_phase = np.max((u.Quantity(-0.25), source_phases.min()))
-    interp = interp1d(source_phases, source_delta_mags, kind="linear")
+    # If there is a phase wrap then phases above the pivot will have been
+    # wrapped around to <0. Work out what the expected minimum phase should be.
+    expected_min_phase = 0 if not phase_pivot else phase_pivot - 1.
+    if not isinstance(expected_min_phase, u.Quantity):
+        expected_min_phase = u.Quantity(expected_min_phase)
 
+    min_phase = np.max((expected_min_phase, source_phases.min()))
+    interp = interp1d(source_phases, source_delta_mags, kind="linear")
     reduced_phases = np.linspace(min_phase, min_phase + 1., num_bins + 1)[:-1]
     reduced_mags = interp(reduced_phases)
     return (reduced_phases, reduced_mags)
