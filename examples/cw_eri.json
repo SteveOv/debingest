@@ -19,17 +19,5 @@
     "trim_masks":[
     ],
     "fitting_params": {
-        "qphot": 0.836,
-        "L3": 0.080,
-        "LD_A": "pow2",
-        "LD_B": "pow2",
-        "LD_A1": 0.6437,
-        "LD_B1": 0.6445,       
-        "LD_A1_fit": 1,
-        "LD_B1_fit": 1,
-        "LD_A2": 0.4676,
-        "LD_B2": 0.4967,
-        "LD_A2_fit": 0,
-        "LD_B2_fit": 0
     }
 }
