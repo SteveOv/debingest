@@ -3,13 +3,16 @@
     "sectors": [
     ],
     "flux_column": "sap_flux",
-    "exptime": "short",
     "quality_bitmask": "hardest",
     "quality_masks": [
     ],
+    "plot_lc": true,
+    "plot_fold": true,
     "polies": [
         { "term": "sf", "degree": 1, "gap_threshold": 0.5 }
     ],
-    "plot_lc": true,
-    "plot_fold": true
+    "trim_masks":[
+    ],
+    "fitting_params": {
+    }
 }

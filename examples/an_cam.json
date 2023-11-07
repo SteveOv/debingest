@@ -1,11 +1,14 @@
 {
-    "target": "V1388 Ori",
+    "target": "AN Cam",
     "sectors": [
     ],
+    "author": "TESS-SPOC",
+    "exptime": "long",
     "flux_column": "sap_flux",
     "quality_bitmask": "hardest",
     "quality_masks": [
     ],
+    "period": 20.99842,
     "plot_lc": true,
     "plot_fold": true,
     "polies": [

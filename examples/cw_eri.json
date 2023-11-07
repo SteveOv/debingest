@@ -3,8 +3,6 @@
     "sys_name": "CW Eridani",
     "prefix": "cw_eri",
     "sectors": [
-        4,
-        31
     ],
     "flux_column": "sap_flux",
     "quality_bitmask": "hardest",

@@ -1,11 +1,12 @@
 {
-    "target": "V1388 Ori",
+    "target": "ZZ Boo",
     "sectors": [
     ],
     "flux_column": "sap_flux",
     "quality_bitmask": "hardest",
     "quality_masks": [
     ],
+    "period": 4.991765,
     "plot_lc": true,
     "plot_fold": true,
     "polies": [
