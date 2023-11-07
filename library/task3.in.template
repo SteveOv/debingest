@@ -23,9 +23,9 @@ ${primary_epoch}            Reference time of primary minimum (JD)
  0 0  Adjust PHASESHIFT   or  SCALE FACTOR   (0, 1, 2, 3)
  1 1  Adjust PERIOD       or  T(pri.ecl.)    (0, 1, 2, 3)
  
- ${file_name_stem}.dat              
- ${file_name_stem}.par
- ${file_name_stem}.out  
- ${file_name_stem}.fit
+ ${file_name_stem}.dat
+ ${file_name_stem}.par.3
+ ${file_name_stem}.out.3
+ ${file_name_stem}.fit.3
 
 chif
