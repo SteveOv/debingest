@@ -14,7 +14,7 @@ ${primary_epoch}            Reference time of primary minimum (JD)
  
  1 1  Adjust RADII SUM    or  RADII RATIO    (0, 1, 2, 3)
  1 0  Adjust INCLINATION  or  MASSRATIO      (0, 1, 2, 3)
- 1 1  Adjust ECOSW-or-E   or  ESINW-or-OMEGA (0, 1, 2, 3)     
+ ${ecosw_fit} ${esinw_fit}  Adjust ECOSW-or-E   or  ESINW-or-OMEGA (0, 1, 2, 3)     
  0 0  Adjust GRAVDARK1    or  GRAVDARK2      (0, 1, 2, 3)
  1 ${L3_fit}  Adjust SURFBRIGHT2  or  THIRDLIGHT     (0, 1, 2, 3)     
  ${LD_A1_fit} ${LD_B1_fit}  Adjust LD-LIN starA or  LD-LIN starB   (0, 1, 2, 3)
@@ -24,8 +24,8 @@ ${primary_epoch}            Reference time of primary minimum (JD)
  1 1  Adjust PERIOD       or  T(pri.ecl.)    (0, 1, 2, 3)
  
  ${file_name_stem}.dat              
- ${file_name_stem}.par               
- ${file_name_stem}.out    
+ ${file_name_stem}.par
+ ${file_name_stem}.out  
  ${file_name_stem}.fit
 
 chif

@@ -241,6 +241,8 @@ for ss in states:
     params = {
         "qphot": 0.,
         "L3_fit": 1,
+        "ecosw_fit": 1,
+        "esinw_fit": 1,
         "LD_A": "quad",
         "LD_B": "quad",
         "LD_A1": 0.25,
