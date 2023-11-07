@@ -43,7 +43,7 @@ print(f"\nWill write files prefixed '{prefix}' to directory {output_dir}")
 # ---------------------------------------------------------------------
 lcs = LightCurveCollection([])
 results = lk.search_lightcurve(target=config.target, sector=config.sectors,
-                               mission="TESS", author="SPOC",
+                               mission=config.mission, author=config.author,
                                exptime=config.exptime)
 if results:
     if "dataUrl" not in results.table.colnames:
