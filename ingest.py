@@ -194,23 +194,24 @@ for ss in states:
 # Use the ML model to estimate system parameters
 # ---------------------------------------------------------------------
 print("\nEstimating system parameters")
-e = estimator.Estimator()
-df = e.predict(np.array([ss.fold_mags[:, np.newaxis] for ss in states]))
+if len(states) > 0:
+    e = estimator.Estimator()
+    df = e.predict(np.array([ss.fold_mags[:, np.newaxis] for ss in states]))
 
-calc_names = utility.append_calculated_params(df)
-col_names = [n for n in df.columns if not n.endswith("_sigma")]
-for (ix, row), ss in zip(df.iterrows(), states):
-    # Print out each individual set of predictions
-    print(f"\nPredictions for light-curve of {ss.name} sector {ss.sector}")
-    utility.echo_predictions(
-        col_names,
-        ["*" if n in calc_names else "" for n in col_names],
-        [row[n] for n in col_names],
-        [row[f"{n}_sigma"] for n in col_names],
-        "Mean", "StdDev")
+    calc_names = utility.append_calculated_params(df)
+    col_names = [n for n in df.columns if not n.endswith("_sigma")]
+    for (ix, row), ss in zip(df.iterrows(), states):
+        # Print out each individual set of predictions
+        print(f"\nPredictions for light-curve of {ss.name} sector {ss.sector}")
+        utility.echo_predictions(
+            col_names,
+            ["*" if n in calc_names else "" for n in col_names],
+            [row[n] for n in col_names],
+            [row[f"{n}_sigma"] for n in col_names],
+            "Mean", "StdDev")
 
-    # Now build the prediction dictionary
-    ss.predictions = {name: row[name] for name in col_names}
+        # Now build the prediction dictionary
+        ss.predictions = {name: row[name] for name in col_names}
 
 
 # ---------------------------------------------------------------------
