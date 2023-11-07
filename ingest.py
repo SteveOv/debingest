@@ -46,6 +46,8 @@ results = lk.search_lightcurve(target=config.target, sector=config.sectors,
                                mission="TESS", author="SPOC",
                                exptime=config.exptime)
 if results:
+    if "dataUrl" not in results.table.colnames:
+        results.table["dataURL"] = results.table["dataURI"]
     lcs = results.download_all(download_dir=f"{output_dir}", cache=True,
                                flux_column=config.flux_column,
                                quality_bitmask=config.quality_bitmask)
