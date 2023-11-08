@@ -6,6 +6,7 @@ import numpy as np
 from scipy.signal import find_peaks
 from scipy.interpolate.interpolate import interp1d
 from astropy.time import Time, TimeDelta
+from astropy.units import Quantity, quantity_input
 import astropy.units as u
 
 from lightkurve.lightcurve import LightCurve, FoldedLightCurve
@@ -151,17 +152,48 @@ def append_magnitude_columns(lc: LightCurve,
         )
         * u.mag)
 
-
-def find_primary_epoch(lc: LightCurve) -> Tuple[Time, int]:
+@quantity_input(period_hint="time")
+def find_primary_epoch(lc: LightCurve,
+                       pe_hint: Time = None,
+                       period_hint: Quantity = None) -> Tuple[Time, int]:
     """
     Will find the primary epoch (Time and index) of the passed LightCurve.
-    This will be the "most prominent" eclipse found.
+    This will be the "most prominent" eclipse found. If both supplied, the two
+    hint values will be used to test whether the peak found is a period multiple
+    of the hinted primary epoch. This is particularly useful where the two 
+    types of eclipse are of similar magnitude and the peak finder may select
+    a secondary eclipse.
     
     :lc: the LightCurve to interogate
+    :pe_hint: hint value for the primary epoch
+    :period_hint: hint value of the period
     """
-    # Look for eclipse peaks in the data. We'll take the most prominent.
     (peak_ixs, peak_props) = find_eclipses(lc)
-    strongest_peak_ix = peak_ixs[peak_props["prominences"].argmax()]
+    if pe_hint is None or period_hint is None:
+        # No hints so just take the most prominent peak
+        strongest_peak_ix = peak_ixs[peak_props["prominences"].argmax()]
+    else:
+        # If we have hints we can use them to reverse down the list of prominent
+        # peaks to make sure we are selecting the most prominent one that is
+        # also near the orbital phase 0. Particularly useful if the two eclipse
+        # types are of similar depth - can stop us setting the pe to a secondary
+        strongest_peak_ix = None
+        sorted_prom_ixs = reversed(np.argsort(peak_props["prominences"]))
+        for prom_ix in sorted_prom_ixs:
+            strong_peak_ix = peak_ixs[prom_ix]
+            period_offset = (lc.time[strong_peak_ix] - pe_hint) / period_hint
+            period_offset = period_offset.value
+
+            if np.isclose(period_offset, np.floor(period_offset), atol=0.2):
+                # This peak is near phase 0 - we'll use it.
+                strongest_peak_ix = strong_peak_ix
+                break
+
+            if strongest_peak_ix is None:
+                # Make sure we have a fallback position of the most prominent
+                # peak for use if no subsequent peaks meet the hint criteria
+                strongest_peak_ix = strong_peak_ix
+
     return lc.time[strongest_peak_ix], strongest_peak_ix
 
 

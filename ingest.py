@@ -136,23 +136,27 @@ del lcs
 # Find the ephemerides (& optionally plot the LCs)
 # ---------------------------------------------------------------------
 print("\nFinding orbital ephemerides")
+tic = None # pylint: disable=invalid-name
 for ss in states:
-    # Attempt to look up ephemeris information from the TESS-eb catalogue
-    # For now, I'm not using their PE as I'm not sure what scale it's in
-    # so continuing to always use the PE derived from inspecting the LC peaks.
-    # Also could probably rework so we only do this once per target.
-    _, ss.period = catalogues.get_tess_ebs_ephemeris_for_tic(ss.tic_id)
-    if ss.period is not None:
-        print(f"Located period of {ss.period} in the TESS-ebs catalogue.")
-    (ss.primary_epoch, pe_ix) = lightcurves.find_primary_epoch(ss.lc)
+    if tic != ss.tic_id:
+        tic = ss.tic_id
+        pe_hint, per_hint = catalogues.get_tess_ebs_ephemeris_for_tic(tic)
 
+    # For now, we're not using TESS-ebs PE directly as it is unclear what the
+    # scale is. Instead we get the PE by inspecting the LC (with TESS-ebs hint).
+    (ss.primary_epoch, pe_ix) = \
+                    lightcurves.find_primary_epoch(ss.lc, pe_hint, per_hint)
     print(f"The {ss.name} sector {ss.sector} P.E. is JD {ss.primary_epoch.jd}")
+
+    # The period is set (in order of precedent) config > TESS-ebs > inspection
     if config.period:
-        ss.period = config.period * u.d
-        print(f"An orbital period of {ss.period} was specified by the user.")
-    elif ss.period is None:
+        ss.period, period_source = config.period * u.d, "target config"
+    elif per_hint is not None:
+        ss.period, period_source = per_hint, "TESS-ebs catalogue"
+    else:
         ss.period = lightcurves.find_period(ss.lc, ss.primary_epoch)
-        print(f"No period specified. Found {ss.period} from eclipse timings.")
+        period_source = "inspection of light-curve eclipse timings"
+    print(f"Using orbital period of {ss.period} from {period_source}.")
 
     # Optionally plot the light-curve incl primary eclipse for diagnostics
     if config.plot_lc:
