@@ -5,6 +5,8 @@
     "flux_column": "sap_flux",
     "quality_bitmask": "hardest",
     "quality_masks": [
+        [58790.6, 58792.5],
+        [58801.0, 58804.7]
     ],
     "plot_lc": true,
     "plot_fold": true,
