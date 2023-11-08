@@ -95,10 +95,16 @@ def write_task3_in_file(file_name: Path,
         if "file_name_stem" not in params:
             params["file_name_stem"] = file_name.stem
 
+        # Preempt JKTEBOP's validation rules
         if "L3" in params and params['L3'] < 0.:
-            print("Negative L3 values are not supported for JKTEBOP in files."
-                  + f" Updating L3 from {params['L3']} to zero.")
+            print(f"Increasing L3 from {params['L3']} to the",
+                  "minimum input value supported by JKTEBOP of 0.0")
             params['L3'] = 0.
+
+        if "rA_plus_rB" in params and params["rA_plus_rB"] > 0.8:
+            print(f"Decreasing rA_plus_rB from {params['rA_plus_rB']} to the",
+                  "maximum input value supported by JKTEBOP of 0.8")
+            params["rA_plus_rB"] = 0.8
 
         # Will error if any expected tokens are not present.
         of.write(template.substitute(**params))
