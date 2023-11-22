@@ -28,6 +28,7 @@ else:
     config = utility.read_ingest_config(args.file)
 
 DETREND_CLIP = 0.5
+PHASE_PIVOT = 0.75
 ML_PHASE_BINS = 1024
 sys_name = config.sys_name or config.target
 
@@ -175,9 +176,9 @@ print("\nPhase folding LCs in preparation for parameter estimation")
 for ss in states:
     # This value should reflect the training set the estimator was trained on.
     # Set to 0.75 to shift phase 0 to 1/4 along x-axis. Set to 1 for no shift.
-    PHASE_PIVOT = 0.75
-    print(f"Folding {ss.name} sector {ss.sector} light-curve.",
-          f"Phase data beyond phase {PHASE_PIVOT} will be wrapped.")
+    print(f"Folding {ss.name} sector {ss.sector} light-curve.")
+    if PHASE_PIVOT is not None and 0 < PHASE_PIVOT < 1.:
+        print(f"Phase data beyond phase {PHASE_PIVOT} will be wrapped.")
     flc = lightcurves.phase_fold_lc(
                                 ss.lc, ss.primary_epoch, ss.period, PHASE_PIVOT)
     phase, ss.fold_mags = lightcurves.get_reduced_folded_lc(
