@@ -61,11 +61,13 @@ class Estimator():
             for ix in range(iterations)
         ])
 
-        # For each LC we want the predictions and 1-sigmas on the same axis.
+        # Summary stats over the iterations axis & undo feature scaling.
+        # For each LC we want predictions followed by 1-sigmas on the same axis
+        # so we get the final predictions in shape [#LCs, #feature + #sigmas]
+        unscaled_preds = np.divide(mc_preds, self.__features_scale)
         preds = np.concatenate([
-            # Summary stats over the iterations axis & undo feature scaling.
-            np.divide(np.mean(mc_preds, axis=0), self.__features_scale),
-            np.divide(np.std(mc_preds, axis=0), self.__features_scale)
+            np.mean(unscaled_preds, axis=0),
+            np.std(unscaled_preds, axis=0)
         ],
         axis=1)
 
