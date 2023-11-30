@@ -3,6 +3,7 @@ A fitting params estimator specific to the ML model used for predictions.
 """
 import os
 from pathlib import Path
+import datetime
 from inspect import getsourcefile
 import numpy as np
 from pandas import DataFrame
@@ -28,9 +29,14 @@ class Estimator():
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
         this_dir = Path(getsourcefile(lambda:0)).parent
 
-        model_file = f"{this_dir}/cnn_model.h5"
-        print(f"Estimator is loading model file {model_file}")
-        self.model = load_model(model_file)
+        model_file = this_dir / "cnn_model.h5"
+        print(f"Estimator is loading model file '{model_file}' ...")
+        self.model = load_model(f"{model_file}")
+        modified = datetime.datetime.fromtimestamp(model_file.stat().st_mtime).isoformat()
+        print(f"Loaded model named '{self.model.name}' last modified at {modified}.")
+        print(f"\tInputs: {self.model.input_shape}")
+        print(f"\tOutputs: {self.model.output_shape}")
+
 
     @property
     def features(self) -> list:
